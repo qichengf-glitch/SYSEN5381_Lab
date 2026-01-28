@@ -58,7 +58,7 @@ This creates two files:
 - `~/.ssh/github_actions_canvastest` (private key) - **Keep this secret!**
 - `~/.ssh/github_actions_canvastest.pub` (public key) - You'll add this to GitHub
 
-#### Step 2: Add Public Key as Deploy Key  
+#### Step 2: Add Public Key as Deploy Key   
 
 1. Go to your **private** `canvastest` repository on GitHub
 2. Click **Settings** → **Deploy keys** → **Add deploy key**
