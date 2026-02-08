@@ -1,0 +1,235 @@
+---
+description: Reusable rule for how README.md files are written (tone, sections, APIs, code, references)
+globs: ["**/README*.md", "**/readme*.md"]
+alwaysApply: false
+---
+# README Writing Rules
+
+Apply this rule when creating or editing README and readme-style documentation. Use a **professional, academic** tone and consistent structure so READMEs are clear, navigable, and reusable across projects.
+
+---
+
+## 1. Overall Tone and Voice
+
+### Tone: Professional and Academic
+
+- **Professional**: Precise, consistent terminology; avoid slang and casual phrasing. Use standard technical language appropriate for course or research documentation.
+- **Academic**: Favor clarity and accuracy over marketing language. State purpose, scope, and limitations directly. Cite or reference external docs when relevant.
+- **Concise**: One idea per sentence where possible. Prefer short paragraphs (2–4 sentences). No filler (“note that”, “it is important to”, “please be aware that”).
+- **Neutral and inclusive**: Use “you” or “the user” for instructions; avoid “we” unless referring to the project or team. Use gender-neutral language.
+
+### Phrases to Avoid
+
+- “It is critical/obvious/clear that…”
+- “Obviously”, “clearly”, “as you can see”, “it goes without saying”
+- “Simply”, “just” (when used to downplay steps)
+- Vague praise (“powerful”, “easy”, “great”) without concrete description
+
+### Preferred Alternatives
+
+- State facts: “This step configures the API endpoint.”
+- Explain why: “Including the token in the request is required for authentication.”
+- Be specific: “The script returns up to 20 rows” instead of “returns a lot of data.”
+
+---
+
+## 2. Required README Sections and Order
+
+Use this section order unless the project explicitly needs something different. Omit a section only if it does not apply; do not reorder.
+
+1. **Title and brief description** (required)  
+   - One `#` title.  
+   - One short paragraph or blockquote stating what the project/script does and for whom.
+
+2. **Overview** (required)  
+   - Purpose, scope, and main outcomes (e.g., “Retrieves daily stock prices for a given ticker and date range”).  
+   - 2–4 sentences.
+
+3. **Prerequisites / Requirements** (required if there are setup steps)  
+   - Runtime, language version, tools, accounts, or keys.  
+   - Bullet list; link to install docs if needed.
+
+4. **Installation / Setup** (when applicable)  
+   - How to get the code and install dependencies.  
+   - Short steps; link to a dedicated doc if setup is long.
+
+5. **Usage / How to run** (required for scripts or apps)  
+   - Exact commands or steps to run the main workflow.  
+   - Include how to customize (e.g., env vars, config files, CLI flags).
+
+6. **Configuration / Environment** (when applicable)  
+   - Env vars, `.env` keys, config files.  
+   - What each key does; never put real secrets in the README.
+
+7. **API / Data / Integration** (when the project uses an API or defined data)  
+   - Endpoint, parameters, auth, and response shape (see “How to document APIs” below).
+
+8. **Project structure / File reference** (optional but recommended)  
+   - Main files or folders and their role.  
+   - Use relative links (see “How to reference files and folders” below).
+
+9. **Related docs / References** (optional)  
+   - Links to lab writeups, papers, external APIs, or other READMEs.
+
+10. **License / Citation** (optional)  
+    - Only if the repo specifies license or citation.
+
+Use `---` between major sections if it improves readability. Keep subsections under each with `##` and `###`; do not go deeper than `###` unless necessary.
+
+---
+
+## 3. Header Formatting and Use of Icons
+
+### Heading hierarchy
+
+- **Level 1 (`#`)**: Only for the README title (e.g., project or script name).
+- **Level 2 (`##`)**: Required sections (Overview, Prerequisites, Usage, API, etc.).
+- **Level 3 (`###`)**: Subsections within a section (e.g., “Query parameters”, “Response fields”).
+
+Use sentence-style capitalization for headings (capitalize first word and proper nouns only), or title-style consistently; do not mix.
+
+### Icons
+
+- **Use sparingly and consistently.** Prefer one icon per main section (e.g., one at the start of “Usage” or “API”) rather than every heading.
+- **Reserve icons for:**  
+  - Section headers that benefit from a quick visual cue (e.g., Setup, Usage, API, Troubleshooting).  
+  - Warnings, tips, or “Back to top” links.
+- **Avoid:** Decorative icons in every line or in the middle of paragraphs.
+- **Suggested mapping** (adjust per project):
+  - Setup / install: 🔧 or 📦
+  - Usage / run: ▶️ or 🚀
+  - API / data: 🔌 or 📡
+  - Configuration / env: ⚙️
+  - Warnings: ⚠️ or 🚨
+  - Tips: 💡
+  - Back to top: 🏠 or ←
+
+Place the icon at the start of the heading, with a space before the text, e.g. `## Usage` or `## API`.
+
+---
+
+## 4. How Code Blocks Should Be Written
+
+### Language tags
+
+- **Always** specify a language for fenced code blocks so syntax highlighting works:
+  - Shell commands: `bash` or `sh`
+  - Python: `python`
+  - R: `r`
+  - JSON: `json`
+  - Generic config: `text` or `yaml` as appropriate
+- Example: ` ```bash ` for a shell snippet, ` ```json ` for a sample response.
+
+### Content rules
+
+- **Runnable**: Commands and snippets should be copy-pasteable and work as shown (no placeholders like `your_key` unless you explain them in the surrounding text).
+- **Minimal**: Prefer the shortest example that demonstrates the point. Omit unrelated code.
+- **Commented**: Add brief comments for non-obvious lines (e.g., “# Optional: set date range”).
+- **Paths**: Prefer relative paths (e.g., `./scripts/run.sh`) or document the assumed working directory (e.g., “From repo root:”).
+
+### Placement
+
+- Put the code block immediately after the sentence that introduces it.
+- If the snippet comes from a file, say so and link the file: “From `scripts/run.sh`:” then the block, or “See [`scripts/run.sh`](scripts/run.sh) for the full script.”
+
+### Line length and length of blocks
+
+- Prefer lines under ~80–100 characters when possible; break long commands with `\` (bash) or explain a two-step approach.
+- Prefer one logical step per block (e.g., one “install” block, one “run” block). Split long procedures into multiple blocks with short captions (e.g., “Install dependencies”, “Run the script”).
+
+---
+
+## 5. How to Document APIs
+
+When the README describes an external API or an API used by the project, include the following in a dedicated **API** (or **Integration**) section.
+
+### Endpoint and method
+
+- **Base URL** and **path** (e.g., `https://api.example.com/v1/resource`).
+- **HTTP method** (e.g., `GET`, `POST`).
+- One sentence on what the endpoint does.
+
+### Authentication
+
+- How auth is done (e.g., query param `token`, `Authorization` header, API key in body).
+- Where the key comes from (e.g., “Set `API_KEY` in `.env`”) and that it must not be committed.
+
+### Parameters
+
+- Use a **table** when there are more than two parameters.
+- Columns: **Parameter**, **Type**, **Required** (Yes/No), **Description**.
+- For path/query/body params, note where they go (path, query, body).
+- Example:
+
+  | Parameter  | Type   | Required | Description                    |
+  |-----------|--------|----------|--------------------------------|
+  | `ticker`  | string | Yes      | Stock symbol (path).           |
+  | `startDate` | string (YYYY-MM-DD) | No | Start of range (query). |
+  | `token`   | string | Yes      | API key (query).               |
+
+### Request example
+
+- One minimal example: method, URL (or path + base), and key headers.
+- For POST, include a minimal JSON body if relevant.
+
+### Response: data structure
+
+- **Format**: e.g., “JSON array of objects.”
+- **Fields**: Table with **Field**, **Type**, **Description**.
+- **Sample**: One short JSON example (single object or 1–2 array elements). Use a fenced `json` code block.
+
+### Errors and limits
+
+- Brief note on HTTP status codes (e.g., 200, 401, 429) or link to official docs.
+- Rate limits or pagination if they matter for usage.
+
+Keep API docs in the README to one place (one section plus optional “See also” link to official API docs).
+
+---
+
+## 6. How to Reference Files and Folders
+
+### General rule
+
+- **Always** use **relative** paths from the README’s location.
+- **Always** turn file and folder names into **links** when they are the main subject of the sentence (e.g., “Edit `config.yaml`” can stay as inline code; “See config.yaml for options” should link: “[`config.yaml`](config.yaml)”).
+
+### File references
+
+- **Format**: `` [`filename.ext`](path/to/filename.ext) ``.
+- **Same directory as README**: `` [`script.py`](script.py) ``.
+- **Subdirectory**: `` [`scripts/run.sh`](scripts/run.sh) ``.
+- **Parent directory**: `` [`../README.md`](../README.md) ``.
+- Use the **actual filename** in the link text (with backticks) so the doc stays correct when the link is broken or viewed in plain text.
+
+### Folder references
+
+- Prefer linking to a **file inside** the folder (e.g., the folder’s README or main script) rather than to the folder itself, when the goal is to send the user to content.
+- If you do refer to a folder by name, use inline code: “Run from the `scripts/` directory” or “Output is written to `output/`.”
+
+### Activity / lab / reading links (course repos)
+
+- When linking to ACTIVITY_, READ_, or LAB_ docs, use **human-readable titles** as link text and the filename in the URL:
+  - `[ACTIVITY: Short Title](ACTIVITY_filename.md)`
+  - `[READ: Short Title](READ_filename.md)`
+  - `[LAB: Short Title](LAB_name.md)`
+- For code or script files, keep filename-as-link: `` [`script.py`](script.py) ``.
+
+### Path consistency
+
+- Use forward slashes in links and paths (`scripts/run.sh`), including on Windows, in markdown.
+- Do not use absolute or machine-specific paths (e.g., `/Users/name/project/`) in the README.
+
+---
+
+## Checklist for README Creation
+
+Before considering a README complete, verify:
+
+- [ ] Tone is professional and academic; no “obvious”, “critical”, or filler phrases.
+- [ ] Required sections are present in the specified order (title, overview, prerequisites if needed, usage, etc.).
+- [ ] Headings use consistent level and capitalization; icons used sparingly and consistently.
+- [ ] All code blocks have a language tag and are runnable or clearly marked as examples.
+- [ ] Any API is documented with endpoint, parameters table, response structure, and sample.
+- [ ] All file and folder references use relative paths and clickable links where appropriate.
+- [ ] No secrets or real API keys in the README.

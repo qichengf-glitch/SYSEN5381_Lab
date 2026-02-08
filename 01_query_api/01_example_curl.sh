@@ -38,6 +38,11 @@ curl -X GET "https://reqres.in/api/users/2" \
 curl -X GET "https://reqres.in/api/users?page=1&id=5" \
      -H "x-api-key: $TEST_API_KEY"
 
+# 3b. GET request with query parameters (page 2)
+#    Fetches users on page 2
+curl -X GET "https://reqres.in/api/users?page=2" \
+     -H "x-api-key: $TEST_API_KEY"
+
 
 # ---
 # 4. POST request to create a new user
