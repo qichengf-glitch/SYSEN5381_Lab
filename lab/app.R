@@ -21,9 +21,16 @@ library(ggplot2)
 
 ## 0.2 Source helper ####################################
 
-# Find bds_api.R whether R is run from shiny_app/ or from project root.
-bds_path = "bds_api.R"
-if (!file.exists(bds_path)) bds_path = "02_productivity/shiny_app/bds_api.R"
+# Resolve bds_api.R robustly for local runs and container runs.
+bds_candidates = c(
+  "bds_api.R",
+  file.path(getwd(), "bds_api.R"),
+  "02_productivity/shiny_app/bds_api.R"
+)
+bds_path = bds_candidates[file.exists(bds_candidates)][1]
+if (is.na(bds_path)) {
+  stop("Could not find bds_api.R. Checked: ", paste(bds_candidates, collapse = ", "))
+}
 source(bds_path)
 
 # 1. UI ###################################
@@ -31,8 +38,8 @@ source(bds_path)
 ui = fluidPage(
   theme = bslib::bs_theme(
     bootswatch = "flatly",
-    base_font = bslib::font_google("Source Sans 3"),
-    heading_font = bslib::font_google("Source Sans 3")
+    base_font = bslib::font_collection("system-ui", "Segoe UI", "Helvetica", "Arial", "sans-serif"),
+    heading_font = bslib::font_collection("system-ui", "Segoe UI", "Helvetica", "Arial", "sans-serif")
   ),
   titlePanel("Census BDS: Business Dynamics Statistics"),
   sidebarLayout(
