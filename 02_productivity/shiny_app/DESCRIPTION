@@ -1,0 +1,16 @@
+Package: bds-shiny-app
+Type: Shiny
+Title: Census BDS Explorer
+Description: Shiny app that queries the Census Business Dynamics Statistics (BDS) API and displays results.
+Depends: R (>= 4.0)
+Imports:
+  shiny,
+  bslib,
+  DT,
+  httr,
+  jsonlite,
+  dplyr,
+  purrr,
+  readr,
+  tidyr,
+  ggplot2

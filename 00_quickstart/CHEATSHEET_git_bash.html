@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Git Bash Cheat Sheet</title>
+<style>
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f5f5f7;
+    margin: 0;
+    padding: 2rem;
+    color: #222;
+  }
+
+  h1 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.2rem;
+  }
+
+  .card {
+    background: white;
+    border-radius: 14px;
+    padding: 1.2rem;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    border-left: 6px solid #6a0dad; /* purple accent */
+  }
+
+  .card h2 {
+    margin-top: 0;
+    font-size: 1.1rem;
+  }
+
+  code {
+    background: #f0f0f3;
+    padding: 0.2rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.95em;
+  }
+
+  ul {
+    padding-left: 1.2rem;
+    margin: 0.5rem 0 0;
+  }
+
+  li {
+    margin-bottom: 0.35rem;
+  }
+
+  footer {
+    margin-top: 2rem;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #666;
+  }
+</style>
+</head>
+<body>
+
+<h1>Git Bash Cheat Sheet</h1>
+
+<div class="grid">
+
+  <div class="card">
+    <h2>🚀 Git: Getting Started</h2>
+    <ul>
+      <li><code>git init</code> — initialize a repo</li>
+      <li><code>git clone &lt;url&gt;</code> — copy a repo</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>📊 Git: Check Status</h2>
+    <ul>
+      <li><code>git status</code> — see changed files</li>
+      <li><code>git log</code> — view commit history</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>💾 Git: Save Changes</h2>
+    <ul>
+      <li><code>git add file.txt</code> — stage a file</li>
+      <li><code>git add .</code> — stage everything</li>
+      <li><code>git commit -m "message"</code> — save snapshot</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>🌐 Git: Sync with GitHub</h2>
+    <ul>
+      <li><code>git push</code> — upload commits</li>
+      <li><code>git pull</code> — download updates</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>📁 File Navigation</h2>
+    <ul>
+      <li><code>pwd</code> — show current folder</li>
+      <li><code>ls</code> — list files</li>
+      <li><code>cd folder</code> — enter folder</li>
+      <li><code>cd ..</code> — go up one level</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>➕ Create Files & Folders</h2>
+    <ul>
+      <li><code>touch file.txt</code> — create file</li>
+      <li><code>mkdir folder</code> — create folder</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>🔁 Move & Rename</h2>
+    <ul>
+      <li><code>mv old.txt new.txt</code> — rename file</li>
+      <li><code>mv file.txt folder/</code> — move file</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>📄 Copy</h2>
+    <ul>
+      <li><code>cp file.txt copy.txt</code> — copy file</li>
+      <li><code>cp -r folder/ new_folder/</code> — copy folder</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>⚠️ Delete (Be Careful)</h2>
+    <ul>
+      <li><code>rm file.txt</code> — delete file</li>
+      <li><code>rm -r folder/</code> — delete folder</li>
+    </ul>
+  </div>
+
+</div>
+
+<footer>
+  Git = version control engine · Git Bash = command-line interface on Windows
+</footer>
+
+</body>
+</html>
