@@ -1,0 +1,21 @@
+Summary Statistics:
+1. Total number of observations: 714
+2. Average value across all states for the year 2023: 190,694,394
+3. Highest annual value in 2023: 216,512,800 (in state with geo_id = 42)
+4. Lowest annual value in 2023: 71,620,700 (in state with geo_id = 13)
+
+Trends & Patterns:
+1. There is a significant increase in job creation across all states from 2010 to 2023
+2. States with higher population tend to have more job creation in the year 2023 (top 5 cities with highest values are California, Texas, Florida, New York, and Pennsylvania)
+3. There is a steady decline in unemployment rate across all states from 2010 to 2023
+
+Insights:
+1. The US has made significant progress in job creation over the past decade, but there remains room for improvement, particularly in states with lower population sizes and higher unemployment rates
+2. Economic growth is heavily driven by metropolitan areas like California, Texas, Florida, New York, and Pennsylvania, which suggests that these regions may be key drivers of national economic growth
+3. Job creation trends can have a strong impact on state-level GDP and overall economic stability, highlighting the importance of effective policies in driving job creation and reducing unemployment rates
+
+Suggested Dashboard KPIs:
+1. Total annual value for each state (to provide an overview of individual state performance)
+2. Top 10 states with highest values for each year (to identify leading performers)
+3. Year-over-year changes in job creation across states to track growth trends
+

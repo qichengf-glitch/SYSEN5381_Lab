@@ -1,0 +1,122 @@
+{
+  "metadata": {
+    "source": "US Census BDS API",
+    "metric": "JOB_CREATION",
+    "geography": "state:*",
+    "years": {
+      "start": 2010,
+      "end": 2023
+    },
+    "rows_clean": 714
+  },
+  "yearly_aggregate": [
+    {
+      "YEAR": 2010,
+      "total_value": 13405052
+    },
+    {
+      "YEAR": 2011,
+      "total_value": 14728007
+    },
+    {
+      "YEAR": 2012,
+      "total_value": 15736598
+    },
+    {
+      "YEAR": 2013,
+      "total_value": 15522990
+    },
+    {
+      "YEAR": 2014,
+      "total_value": 15583546
+    },
+    {
+      "YEAR": 2015,
+      "total_value": 16279659
+    },
+    {
+      "YEAR": 2016,
+      "total_value": 16030945
+    },
+    {
+      "YEAR": 2017,
+      "total_value": 17102443
+    },
+    {
+      "YEAR": 2018,
+      "total_value": 16442737
+    },
+    {
+      "YEAR": 2019,
+      "total_value": 15803545
+    },
+    {
+      "YEAR": 2020,
+      "total_value": 15815946
+    },
+    {
+      "YEAR": 2021,
+      "total_value": 15068762
+    },
+    {
+      "YEAR": 2022,
+      "total_value": 21651280
+    },
+    {
+      "YEAR": 2023,
+      "total_value": 18450128
+    }
+  ],
+  "top_10_latest_year": [
+    {
+      "YEAR": 2023,
+      "geo_id": "06",
+      "metric_value": 2130913
+    },
+    {
+      "YEAR": 2023,
+      "geo_id": "48",
+      "metric_value": 1792537
+    },
+    {
+      "YEAR": 2023,
+      "geo_id": "12",
+      "metric_value": 1346948
+    },
+    {
+      "YEAR": 2023,
+      "geo_id": "36",
+      "metric_value": 1171132
+    },
+    {
+      "YEAR": 2023,
+      "geo_id": "17",
+      "metric_value": 716207
+    },
+    {
+      "YEAR": 2023,
+      "geo_id": "42",
+      "metric_value": 679057
+    },
+    {
+      "YEAR": 2023,
+      "geo_id": "39",
+      "metric_value": 648248
+    },
+    {
+      "YEAR": 2023,
+      "geo_id": "13",
+      "metric_value": 608013
+    },
+    {
+      "YEAR": 2023,
+      "geo_id": "37",
+      "metric_value": 569576
+    },
+    {
+      "YEAR": 2023,
+      "geo_id": "34",
+      "metric_value": 525685
+    }
+  ]
+}
