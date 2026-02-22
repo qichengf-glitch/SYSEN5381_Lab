@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-RUN R -e "install.packages(c('shiny','bslib','DT','httr','jsonlite','dplyr','purrr','readr','tidyr','ggplot2'), repos='https://cloud.r-project.org', dependencies=c('Depends','Imports','LinkingTo'))"
+RUN R -e "install.packages(c('shiny','bslib','DT','httr','jsonlite','dplyr','purrr','readr','tidyr','ggplot2','lubridate','glue'), repos='https://cloud.r-project.org', dependencies=c('Depends','Imports','LinkingTo'))"
 
 WORKDIR /app
 COPY . /app
