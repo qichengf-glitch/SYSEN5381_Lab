@@ -223,6 +223,12 @@ server = function(input, output, session) {
       return()
     }
 
+    # Check for date range warning and notify user
+    date_warning = attr(out, "date_range_warning")
+    if (!is.null(date_warning)) {
+      showNotification(date_warning, type = "warning", duration = 10)
+    }
+
     data_state(out)
     data_error(NULL)
     showNotification(glue("Query complete: {nrow(out)} rows loaded."), type = "message")
@@ -339,18 +345,41 @@ server = function(input, output, session) {
     }
 
     tryCatch({
-      df %>%
+      # Determine primary data_type: use selected one, or "SM" if "default"
+      primary_dtype = if (input$data_type == "default") "SM" else input$data_type
+      
+      # Filter to primary data_type only to avoid mixing multiple series
+      df_filtered = df %>%
         mutate(
           month = if (inherits(month, "Date")) month else as.Date(month),
           value = suppressWarnings(as.numeric(value)),
           industry = as.character(industry)
         ) %>%
-        filter(!is.na(month), !is.na(value), !is.na(industry), nzchar(industry)) %>%
+        filter(!is.na(month), !is.na(value), !is.na(industry), nzchar(industry))
+      
+      # If data_type column exists, filter to primary sequence
+      if ("data_type" %in% names(df_filtered)) {
+        df_filtered = df_filtered %>%
+          filter(data_type == primary_dtype)
+      }
+      
+      # Calculate derived metrics on the filtered primary sequence (safely)
+      df_filtered %>%
         arrange(industry, month) %>%
         group_by(industry) %>%
         mutate(
-          yoy = 100 * (value / lag(value, 12) - 1),
-          mom = 100 * (value / lag(value, 1) - 1)
+          # Safe YoY calculation: avoid division by zero and clamp extreme values
+          yoy = if_else(
+            is.na(lag(value, 12)) | abs(lag(value, 12)) < 1e-6,
+            NA_real_,
+            pmax(-1000, pmin(10000, 100 * (value / lag(value, 12) - 1)))
+          ),
+          # Safe MoM calculation: avoid division by zero and clamp extreme values
+          mom = if_else(
+            is.na(lag(value, 1)) | abs(lag(value, 1)) < 1e-6,
+            NA_real_,
+            pmax(-1000, pmin(10000, 100 * (value / lag(value, 1) - 1)))
+          )
         ) %>%
         ungroup()
     }, error = function(e) {
@@ -391,19 +420,27 @@ server = function(input, output, session) {
 
     # Create the plot using ggplot2
     tryCatch({
+      # Determine primary data_type for title
+      primary_dtype = if (input$data_type == "default") "SM" else input$data_type
+      data_type_label = if (primary_dtype == "SM") "Sales (SM)" else if (primary_dtype == "IM") "Inventories (IM)" else "Default"
+      
+      plot_title = glue("Monthly Retail Trend by Industry ({data_type_label})")
+      
       p = ggplot(df_plot, aes(x = month, y = .data[[y_col]], color = industry, group = industry)) +
         geom_line(linewidth = 1.2, na.rm = TRUE) +
         geom_point(size = 2, na.rm = TRUE, alpha = 0.7) +
         labs(
-          title = "Monthly Retail Trend by Industry",
+          title = plot_title,
           x = "Month",
           y = y_label,
-          color = "Industry"
+          color = "Industry",
+          caption = glue("Data type: {data_type_label}. Each line represents a single consistent series.")
         ) +
         theme_minimal(base_size = 13) +
         theme(
           legend.position = "bottom",
           plot.title = element_text(hjust = 0.5, face = "bold"),
+          plot.caption = element_text(size = 9, hjust = 0),
           axis.text.x = element_text(angle = 45, hjust = 1)
         ) +
         scale_x_date(date_labels = "%Y-%m", date_breaks = "6 months")
@@ -435,12 +472,32 @@ server = function(input, output, session) {
       return()
     }
 
-    stats = compute_summary_stats(df)
+    # Filter to primary data_type only for AI report (same logic as trend_df)
+    primary_dtype = if (input$data_type == "default") "SM" else input$data_type
+    df_primary = df
+    
+    # If data_type column exists, filter to primary sequence only
+    if ("data_type" %in% names(df_primary)) {
+      df_primary = df_primary %>%
+        filter(data_type == primary_dtype)
+      
+      if (nrow(df_primary) == 0) {
+        msg = glue("No data available for data_type '{primary_dtype}'. Try a different data type.")
+        ai_state(NULL)
+        ai_error(msg)
+        showNotification(msg, type = "error")
+        return()
+      }
+    }
+    
+    # Compute stats only on primary sequence
+    stats = compute_summary_stats(df_primary)
     params = list(
       industry_labels = selected_industry_labels(),
       start_month = input$start_month,
       end_month = input$end_month,
       data_type = input$data_type,
+      primary_data_type = primary_dtype,  # Add this for AI prompt clarity
       endpoint = MRTS_ENDPOINTS[1]
     )
 

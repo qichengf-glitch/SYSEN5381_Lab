@@ -221,6 +221,30 @@ fetch_mrts_data = function(params) {
   if (nrow(df_raw) == 0) {
     stop(glue("API returned empty data for this query. Last status: {last_status}"))
   }
+  
+  # Check available date range and warn if query exceeds it
+  if (nrow(df_raw) > 0 && "time" %in% names(df_raw)) {
+    period_col = pick_col(names(df_raw), exact = c("time_slot_date", "time", "month", "period", "time_slot_id"), contains = c("time_slot_date", "time", "month", "period", "time_slot_id"))
+    if (!is.na(period_col)) {
+      available_months = parse_mrts_month(as.character(df_raw[[period_col]]))
+      available_months = available_months[!is.na(available_months)]
+      if (length(available_months) > 0) {
+        min_available = format(min(available_months), "%Y-%m")
+        max_available = format(max(available_months), "%Y-%m")
+        query_start = as.Date(paste0(start_month, "-01"))
+        query_end = as.Date(paste0(end_month, "-01"))
+        
+        # Warn if query range exceeds available data (will be handled in app.R)
+        if (query_start < min(available_months) || query_end > max(available_months)) {
+          # Store warning in a special attribute (will be checked in app.R)
+          attr(df_raw, "date_range_warning") = glue(
+            "Query range ({start_month} to {end_month}) exceeds available data ({min_available} to {max_available}). ",
+            "Data will be clamped to available range."
+          )
+        }
+      }
+    }
+  }
 
   period_col = pick_col(
     names(df_raw),
@@ -326,10 +350,31 @@ compute_summary_stats = function(df) {
       max = max(value, na.rm = TRUE),
       first_value = first(value),
       last_value = last(value),
-      pct_change = if_else(abs(first_value) < 1e-9, NA_real_, (last_value - first_value) / abs(first_value) * 100),
+      # Safe pct_change calculation: avoid division by zero and extreme values
+      pct_change = if_else(
+        is.na(first_value) || is.na(last_value) || abs(first_value) < 1e-6,
+        NA_real_,
+        # Clamp to reasonable range (-1000% to 10000%) to avoid extreme values
+        pmax(-1000, pmin(10000, (last_value - first_value) / abs(first_value) * 100))
+      ),
+      # Calculate YoY and MoM changes safely
+      yoy_change = if (n() >= 13) {
+        recent = tail(value, 1)
+        year_ago = value[n() - 12]
+        if (!is.na(recent) && !is.na(year_ago) && abs(year_ago) > 1e-6) {
+          pmax(-1000, pmin(10000, (recent - year_ago) / abs(year_ago) * 100))
+        } else NA_real_
+      } else NA_real_,
+      mom_change = if (n() >= 2) {
+        recent = tail(value, 1)
+        prev = value[n() - 1]
+        if (!is.na(recent) && !is.na(prev) && abs(prev) > 1e-6) {
+          pmax(-1000, pmin(10000, (recent - prev) / abs(prev) * 100))
+        } else NA_real_
+      } else NA_real_,
       volatility = sd(value, na.rm = TRUE),
-      peak_month = month_str[which.max(value)],
-      trough_month = month_str[which.min(value)],
+      peak_month = if (n() > 0 && "month_str" %in% names(df)) month_str[which.max(value)] else NA_character_,
+      trough_month = if (n() > 0 && "month_str" %in% names(df)) month_str[which.min(value)] else NA_character_,
       .groups = "drop"
     )
 
@@ -349,9 +394,14 @@ compute_summary_stats = function(df) {
 format_stats_for_prompt = function(stats) {
   per_industry_lines = stats$per_industry %>%
     mutate(
+      # Use if_else for vectorized conditional (not if, which only works for length-1)
+      pct_change_str = if_else(is.na(pct_change), "N/A", paste0(round(pct_change, 2), "%")),
+      yoy_str = if_else(is.na(yoy_change), "N/A", paste0(round(yoy_change, 2), "%")),
+      mom_str = if_else(is.na(mom_change), "N/A", paste0(round(mom_change, 2), "%")),
       line = glue(
         "- {industry}: mean={round(mean,2)}, min={round(min,2)}, max={round(max,2)}, ",
-        "last={round(last_value,2)}, pct_change={round(pct_change,2)}%, volatility={round(volatility,2)}, ",
+        "first={round(first_value,2)}, last={round(last_value,2)}, ",
+        "pct_change={pct_change_str}, YoY={yoy_str}, MoM={mom_str}, volatility={round(volatility,2)}, ",
         "peak_month={peak_month}, trough_month={trough_month}"
       )
     ) %>%
@@ -481,6 +531,11 @@ call_ollama_report = function(prompt_text) {
 
 generate_ai_report = function(stats, params) {
   stats_block = format_stats_for_prompt(stats)
+  
+  # Determine primary data_type for clarity
+  primary_dtype = if (!is.null(params$primary_data_type)) params$primary_data_type else if (params$data_type == "default") "SM" else params$data_type
+  data_type_label = if (primary_dtype == "SM") "Sales (SM)" else if (primary_dtype == "IM") "Inventories (IM)" else "Default"
+  
   prompt = glue(
 "Write a structured monthly retail report using ONLY the stats below.
 
@@ -491,12 +546,14 @@ Return exactly these sections:
 4) Notable Months / Seasonality (peak/trough months)
 5) Data Notes (source, range, units, seasonal adjustment)
 
-Selected industries: {paste(params$industry_labels, collapse = ', ')}
-Date range requested: {params$start_month} to {params$end_month}
-Data type selector: {params$data_type}
-Endpoint: {params$endpoint}
+IMPORTANT: The statistics below are computed from a SINGLE primary data series to ensure consistency.
+- Selected industries: {paste(params$industry_labels, collapse = ', ')}
+- Date range: {params$start_month} to {params$end_month}
+- Primary data type used: {data_type_label} (code: {primary_dtype})
+- Data source: US Census MRTS API ({params$endpoint})
+- All metrics (mean, min, max, YoY%, MoM%, volatility) are calculated from this single consistent series.
 
-Computed stats:
+Computed stats (from primary series only):
 {stats_block}
 "
   )
