@@ -1,208 +1,635 @@
-#' @name app.R
-#' @title Shiny app: Census BDS (Business Dynamics Statistics) Explorer
-#' @description
-#' Runs the Census BDS API query on user request; supports metric, geography,
-#' and year range. Displays results in a table and time series plot.
+# AI-Powered Reporter Software (SYSEN 5381 Lab)
+# How to run:
+#   shiny::runApp("lab")
+# API key setup:
+#   Census (optional but recommended): Sys.setenv(CENSUS_API_KEY = "...")
+#   OR put in .Renviron file in project root or home directory
+# AI setup:
+#   OpenAI: Sys.setenv(OPENAI_API_KEY = "...", OPENAI_MODEL = "gpt-4o-mini")
+#   OR Ollama: Sys.setenv(OLLAMA_MODEL = "smollm2:1.7b", OLLAMA_HOST = "http://localhost:11434")
 
-# 0. SETUP ###################################
-
-## 0.1 Load packages #################################
-
-library(shiny)
-library(bslib)
-library(DT)
-library(httr)
-library(jsonlite)
-library(dplyr)
-library(purrr)
-library(readr)
-library(tidyr)
-library(ggplot2)
-
-## 0.2 Source helper ####################################
-
-# Resolve bds_api.R robustly for local runs and container runs.
-bds_candidates = c(
-  "bds_api.R",
-  file.path(getwd(), "bds_api.R"),
-  "02_productivity/shiny_app/bds_api.R"
+# Load environment variables from .Renviron and .env files
+# Try multiple locations in order of preference
+renv_paths = c(
+  ".Renviron",                    # Current directory (lab/)
+  "../dsai/.Renviron",            # Parent dsai directory
+  "../../dsai/.Renviron",          # Two levels up
+  "~/.Renviron"                   # Home directory
 )
-bds_path = bds_candidates[file.exists(bds_candidates)][1]
-if (is.na(bds_path)) {
-  stop("Could not find bds_api.R. Checked: ", paste(bds_candidates, collapse = ", "))
+for (path in renv_paths) {
+  if (file.exists(path)) {
+    readRenviron(path)
+    break
+  }
 }
-source(bds_path)
 
-# 1. UI ###################################
+# Also try to load from .env files (for Python-style projects)
+env_paths = c(
+  "../dsai/.env",                 # Parent dsai directory
+  "../../dsai/.env",              # Two levels up
+  ".env"                          # Current directory
+)
+for (path in env_paths) {
+  if (file.exists(path)) {
+    env_lines = readLines(path, warn = FALSE)
+    for (line in env_lines) {
+      line = trimws(line)
+      if (nchar(line) > 0 && !startsWith(line, "#") && grepl("=", line)) {
+        parts = strsplit(line, "=", fixed = TRUE)[[1]]
+        if (length(parts) == 2) {
+          key = trimws(parts[1])
+          value = trimws(parts[2])
+          # Only set if not already set
+          if (!nzchar(Sys.getenv(key))) {
+            do.call(Sys.setenv, setNames(list(value), key))
+          }
+        }
+      }
+    }
+    break
+  }
+}
+
+suppressPackageStartupMessages({
+  library(shiny)
+  library(bslib)
+  library(DT)
+  library(dplyr)
+  library(tidyr)
+  library(ggplot2)
+  library(purrr)
+  library(lubridate)
+  library(glue)
+})
+
+source("mrts_helpers.R")
+
+month_opts = month_choices("2018-01", "2025-12")
 
 ui = fluidPage(
-  theme = bslib::bs_theme(
-    bootswatch = "flatly",
-    base_font = bslib::font_collection("system-ui", "Segoe UI", "Helvetica", "Arial", "sans-serif"),
-    heading_font = bslib::font_collection("system-ui", "Segoe UI", "Helvetica", "Arial", "sans-serif")
-  ),
-  titlePanel("Census BDS: Business Dynamics Statistics"),
+  theme = bs_theme(bootswatch = "flatly"),
+  titlePanel("AI-Powered MRTS Reporter"),
   sidebarLayout(
     sidebarPanel(
       width = 3,
-      p("Query the Census BDS API. Set options and click Fetch.", class = "text-muted"),
-      selectInput(
-        "metric",
-        "Metric",
-        choices = c(
-          "JOB_CREATION" = "JOB_CREATION",
-          "JOB_DESTRUCTION" = "JOB_DESTRUCTION",
-          "NET_JOB_CREATION" = "NET_JOB_CREATION",
-          "ESTABLISHMENTS_BIRTHS" = "ESTABLISHMENTS_BIRTHS",
-          "ESTABLISHMENTS_DEATHS" = "ESTABLISHMENTS_DEATHS"
-        ),
-        selected = "JOB_CREATION"
-      ),
+      h4("Query Controls"),
       radioButtons(
-        "geography",
-        "Geography",
-        choices = c(
-          "US total" = "us:1",
-          "All states" = "state:*"
-        ),
-        selected = "us:1"
+        "industry_mode",
+        "Industry selection mode",
+        choices = c("Single-select" = "single", "Multi-select" = "multi"),
+        selected = "multi"
       ),
-      sliderInput(
-        "year_range",
-        "Years",
-        min = 1978,
-        max = 2023,
-        value = c(2010, 2023),
-        step = 1,
-        sep = ""
+      uiOutput("industry_selector_ui"),
+      selectInput("start_month", "Start month (YYYY-MM)", choices = month_opts, selected = "2020-01"),
+      selectInput("end_month", "End month (YYYY-MM)", choices = month_opts, selected = tail(month_opts, 1)),
+      selectInput("data_type", "Data type", choices = MRTS_DATA_TYPES, selected = "default"),
+      checkboxInput("show_growth", "Show derived series (YoY% / MoM%)", value = FALSE),
+      radioButtons(
+        "growth_type",
+        "Derived series type",
+        choices = c("YoY %" = "yoy", "MoM %" = "mom"),
+        selected = "yoy"
       ),
-      actionButton("fetch", "Fetch from API", class = "btn-primary"),
+      actionButton("run_query", "Run Query", class = "btn-primary"),
+      actionButton("generate_ai_report", "Generate AI Report", class = "btn-success"),
+      downloadButton("download_report", "Download Report"),
       hr(),
-      uiOutput("key_status_ui"),
-      p(
-        "Set CENSUS_API_KEY in .Renviron or system environment if needed.",
-        class = "text-muted",
-        style = "font-size: 0.85em;"
-      )
+      uiOutput("sidebar_status")
     ),
     mainPanel(
       width = 9,
-      uiOutput("status_ui"),
-      br(),
       tabsetPanel(
-        tabPanel("Table", DT::dataTableOutput("table")),
-        tabPanel("Time series", plotOutput("plot", height = "400px"))
+        tabPanel(
+          "Data",
+          br(),
+          uiOutput("data_message"),
+          DTOutput("data_table")
+        ),
+        tabPanel(
+          "Trends",
+          br(),
+          uiOutput("trends_message"),
+          plotOutput("trends_plot", height = "450px")
+        ),
+        tabPanel(
+          "AI Report",
+          br(),
+          uiOutput("ai_status"),
+          tags$h4("Metadata"),
+          tableOutput("ai_metadata"),
+          tags$h4("Generated Report"),
+          verbatimTextOutput("ai_report_text")
+        )
       )
     )
   )
 )
 
-# 2. SERVER ###################################
-
 server = function(input, output, session) {
+  data_state = reactiveVal(NULL)
+  data_error = reactiveVal(NULL)
+  ai_state = reactiveVal(NULL)
+  ai_error = reactiveVal(NULL)
+  ai_generated_at = reactiveVal(NULL)
 
-  # Reactive value to hold the fetched data (or error message).
-  data_result = reactiveVal(NULL)
-
-  output$key_status_ui = renderUI({
-    key_set = nzchar(trimws(Sys.getenv("CENSUS_API_KEY")))
-    if (key_set) {
-      div(class = "text-success", style = "font-size: 0.9em;", strong("API key: set"))
+  output$industry_selector_ui = renderUI({
+    if (identical(input$industry_mode, "single")) {
+      selectInput(
+        "industries_single",
+        "Industry (NAICS/category)",
+        choices = MRTS_INDUSTRIES,
+        selected = unname(MRTS_INDUSTRIES)[1],
+        multiple = FALSE
+      )
     } else {
-      div(class = "text-danger", style = "font-size: 0.9em;", strong("API key: not set"))
-    }
-  })
-
-  observeEvent(input$fetch, {
-    api_key = Sys.getenv("CENSUS_API_KEY")
-    years = seq(input$year_range[1], input$year_range[2], by = 1)
-
-    result = tryCatch(
-      {
-        df = fetch_bds(
-          metric = input$metric,
-          geo_for = input$geography,
-          years = years,
-          api_key = api_key
-        )
-        list(ok = TRUE, data = df)
-      },
-      error = function(e) {
-        list(ok = FALSE, message = conditionMessage(e))
-      }
-    )
-
-    data_result(result)
-  })
-
-  output$status_ui = renderUI({
-    res = data_result()
-    if (is.null(res)) {
-      return(p("Click \"Fetch from API\" to load data.", class = "text-muted"))
-    }
-    if (!res$ok) {
-      return(
-        div(
-          class = "alert alert-danger",
-          strong("Error: "),
-          res$message
-        )
+      selectizeInput(
+        "industries_multi",
+        "Industries (NAICS/category)",
+        choices = MRTS_INDUSTRIES,
+        selected = unname(MRTS_INDUSTRIES)[1:2],
+        multiple = TRUE,
+        options = list(placeholder = "Select one or more industries")
       )
     }
-    n = nrow(res$data)
-    div(
-      class = "alert alert-success",
-      strong("Success. "),
-      sprintf("Fetched %d row(s).", n)
-    )
   })
 
-  output$table = DT::renderDataTable({
-    res = data_result()
-    if (is.null(res) || !res$ok) return(NULL)
-    DT::datatable(
-      res$data,
-      options = list(pageLength = 15, scrollX = TRUE),
-      rownames = FALSE
-    )
-  })
-
-  output$plot = renderPlot({
-    res = data_result()
-    if (is.null(res) || !res$ok) return(NULL)
-    df = res$data
-    metric = input$metric
-
-    # If state-level, aggregate by YEAR for the plot.
-    if ("state" %in% names(df)) {
-      df_plot = df %>%
-        group_by(YEAR) %>%
-        summarise(!!sym(metric) := sum(.data[[metric]], na.rm = TRUE), .groups = "drop")
-    } else {
-      df_plot = df
+  selected_industries = reactive({
+    if (identical(input$industry_mode, "single")) {
+      if (is.null(input$industries_single) || !nzchar(input$industries_single)) return(character(0))
+      return(input$industries_single)
     }
+    input$industries_multi %||% character(0)
+  })
+
+  selected_industry_labels = reactive({
+    codes = selected_industries()
+    labels = names(MRTS_INDUSTRIES)[match(codes, unname(MRTS_INDUSTRIES))]
+    ifelse(is.na(labels), codes, labels)
+  })
+
+  observeEvent(input$run_query, {
+    ai_state(NULL)
+    ai_error(NULL)
+    ai_generated_at(NULL)
+    data_error(NULL)
+
+    industries = selected_industries()
+    if (length(industries) == 0) {
+      msg = "No industry selected. Choose one or more industries, then click Run Query."
+      data_state(NULL)
+      data_error(msg)
+      showNotification(msg, type = "error")
+      return()
+    }
+
+    if (input$start_month > input$end_month) {
+      msg = "Start month is after end month. Please fix the date range."
+      data_state(NULL)
+      data_error(msg)
+      showNotification(msg, type = "error")
+      return()
+    }
+
+    query_params = list(
+      industries = industries,
+      start_month = input$start_month,
+      end_month = input$end_month,
+      data_type = input$data_type
+    )
+
+    out = withProgress(message = "Running MRTS query...", value = 0, {
+      incProgress(0.2, detail = "Sending request")
+      result = tryCatch(
+        fetch_mrts_data(query_params),
+        error = function(e) e
+      )
+      incProgress(1, detail = "Done")
+      result
+    })
+
+    if (inherits(out, "error")) {
+      msg = conditionMessage(out)
+      data_state(NULL)
+      data_error(msg)
+      showNotification(glue("API query failed: {msg}"), type = "error")
+      return()
+    }
+
+    if (nrow(out) == 0) {
+      msg = "API returned empty data for your selection."
+      data_state(out)
+      data_error(msg)
+      showNotification(msg, type = "warning")
+      return()
+    }
+
+    data_state(out)
+    data_error(NULL)
+    showNotification(glue("Query complete: {nrow(out)} rows loaded."), type = "message")
+  }, ignoreInit = TRUE)
+
+  output$sidebar_status = renderUI({
+    data = data_state()
+    key_set = nzchar(Sys.getenv("CENSUS_API_KEY"))
+    tags$div(
+      p(if (key_set) "CENSUS_API_KEY: set" else "CENSUS_API_KEY: not set", class = if (key_set) "text-success" else "text-danger"),
+      p(if (is.null(data)) "No query run yet." else glue("Current rows: {nrow(data)}"), class = "text-muted")
+    )
+  })
+
+  output$data_message = renderUI({
+    err = data_error()
+    data = data_state()
+    if (!is.null(err)) {
+      return(div(class = "alert alert-warning", strong("Notice: "), err))
+    }
+    if (is.null(data)) {
+      return(div(class = "alert alert-info", "Click 'Run Query' to fetch MRTS data."))
+    }
+    div(class = "alert alert-success", glue("Rows returned: {nrow(data)}"))
+  })
+
+  output$data_table = renderDT({
+    data = data_state()
+    
+    # Check if data exists
+    if (is.null(data)) {
+      return(datatable(
+        data.frame(Message = "Run Query to load data.", stringsAsFactors = FALSE),
+        options = list(dom = "t", pageLength = 1),
+        rownames = FALSE
+      ))
+    }
+    
+    if (nrow(data) == 0) {
+      return(datatable(
+        data.frame(Message = "No data to display for this selection.", stringsAsFactors = FALSE),
+        options = list(dom = "t", pageLength = 1),
+        rownames = FALSE
+      ))
+    }
+
+    # Convert to data.frame and handle different column types
+    tryCatch({
+      safe_df = as.data.frame(data, stringsAsFactors = FALSE)
+      
+      # Convert Date columns to character
+      for (col_name in names(safe_df)) {
+        if (inherits(safe_df[[col_name]], "Date")) {
+          safe_df[[col_name]] = format(safe_df[[col_name]], "%Y-%m-%d")
+        } else if (is.list(safe_df[[col_name]])) {
+          safe_df[[col_name]] = vapply(safe_df[[col_name]], function(x) {
+            paste(as.character(unlist(x)), collapse = ", ")
+          }, character(1))
+        } else if (!is.numeric(safe_df[[col_name]]) && !is.character(safe_df[[col_name]])) {
+          safe_df[[col_name]] = as.character(safe_df[[col_name]])
+        }
+      }
+      
+      # Ensure all columns are valid for DT
+      safe_df = safe_df[, sapply(safe_df, function(x) !all(is.na(x))), drop = FALSE]
+      
+      if (ncol(safe_df) == 0) {
+        return(datatable(
+          data.frame(Message = "No valid columns to display.", stringsAsFactors = FALSE),
+          options = list(dom = "t", pageLength = 1),
+          rownames = FALSE
+        ))
+      }
+
+      datatable(
+        safe_df,
+        options = list(
+          pageLength = 15,
+          scrollX = TRUE,
+          dom = "Bfrtip",
+          buttons = c("copy", "csv", "excel")
+        ),
+        extensions = "Buttons",
+        rownames = FALSE
+      )
+    }, error = function(e) {
+      datatable(
+        data.frame(
+          Error = paste("Table render error:", conditionMessage(e)),
+          stringsAsFactors = FALSE
+        ),
+        options = list(dom = "t", pageLength = 1),
+        rownames = FALSE
+      )
+    })
+  })
+
+  trend_df = reactive({
+    df = data_state()
+    
+    if (is.null(df)) {
+      return(data.frame())
+    }
+    
+    if (nrow(df) == 0) {
+      return(data.frame())
+    }
+    
+    # Ensure required columns exist
+    required_cols = c("month", "value", "industry")
+    missing_cols = setdiff(required_cols, names(df))
+    if (length(missing_cols) > 0) {
+      return(data.frame())
+    }
+
+    tryCatch({
+      df %>%
+        mutate(
+          month = if (inherits(month, "Date")) month else as.Date(month),
+          value = suppressWarnings(as.numeric(value)),
+          industry = as.character(industry)
+        ) %>%
+        filter(!is.na(month), !is.na(value), !is.na(industry), nzchar(industry)) %>%
+        arrange(industry, month) %>%
+        group_by(industry) %>%
+        mutate(
+          yoy = 100 * (value / lag(value, 12) - 1),
+          mom = 100 * (value / lag(value, 1) - 1)
+        ) %>%
+        ungroup()
+    }, error = function(e) {
+      data.frame()
+    })
+  })
+
+  output$trends_plot = renderPlot({
+    df = trend_df()
+    
+    # Check if data exists
+    if (is.null(df) || nrow(df) == 0) {
+      plot.new()
+      text(0.5, 0.5, "No trend data available. Run Query first.", cex = 1.2)
+      return(invisible(NULL))
+    }
+
+    # Determine which column to plot
+    y_col = if (isTRUE(input$show_growth) && input$growth_type == "yoy") "yoy" else if (isTRUE(input$show_growth)) "mom" else "value"
+    y_label = if (y_col == "yoy") "YoY % change" else if (y_col == "mom") "MoM % change" else "Sales value"
+    
+    # Ensure the column exists
+    if (!y_col %in% names(df)) {
+      y_col = "value"
+      y_label = "Sales value"
+    }
+
+    # Filter and prepare data for plotting
+    df_plot = df %>%
+      filter(!is.na(month), !is.na(.data[[y_col]]), !is.na(industry), nzchar(industry)) %>%
+      arrange(industry, month)
 
     if (nrow(df_plot) == 0) {
-      return(
-        ggplot() +
-          annotate("text", x = 0.5, y = 0.5, label = "No data to plot", size = 5) +
-          theme_void()
-      )
+      plot.new()
+      text(0.5, 0.5, "No valid data points after filtering.", cex = 1.2)
+      return(invisible(NULL))
     }
 
-    p = ggplot(df_plot, aes(x = YEAR, y = .data[[metric]])) +
-      geom_point(size = 2.5, color = "#2c3e50")
-    if (nrow(df_plot) >= 2) {
-      p = p + geom_line(linewidth = 1.2, color = "#2c3e50")
-    }
-    p +
-      scale_x_continuous(breaks = seq(min(df_plot$YEAR), max(df_plot$YEAR), by = max(1, (max(df_plot$YEAR) - min(df_plot$YEAR)) %/% 10))) +
-      labs(title = paste("BDS:", metric), x = "Year", y = metric) +
-      theme_minimal(base_size = 14) +
-      theme(plot.title = element_text(face = "bold"), panel.grid.minor = element_blank())
+    # Create the plot using ggplot2
+    tryCatch({
+      p = ggplot(df_plot, aes(x = month, y = .data[[y_col]], color = industry, group = industry)) +
+        geom_line(linewidth = 1.2, na.rm = TRUE) +
+        geom_point(size = 2, na.rm = TRUE, alpha = 0.7) +
+        labs(
+          title = "Monthly Retail Trend by Industry",
+          x = "Month",
+          y = y_label,
+          color = "Industry"
+        ) +
+        theme_minimal(base_size = 13) +
+        theme(
+          legend.position = "bottom",
+          plot.title = element_text(hjust = 0.5, face = "bold"),
+          axis.text.x = element_text(angle = 45, hjust = 1)
+        ) +
+        scale_x_date(date_labels = "%Y-%m", date_breaks = "6 months")
+      
+      print(p)
+    }, error = function(e) {
+      plot.new()
+      text(0.5, 0.5, paste("Plot error:", conditionMessage(e)), cex = 1.2)
+    })
   })
-}
+  
+  output$trends_message = renderUI({
+    df = data_state()
+    if (is.null(df) || nrow(df) == 0) {
+      return(div(class = "alert alert-info", "Run Query first to see trends chart."))
+    }
+    div(class = "alert alert-success", glue("Showing trends for {nrow(df)} data points across {length(unique(df$industry))} industry(ies)."))
+  })
 
-# 3. RUN ###################################
+  observeEvent(input$generate_ai_report, {
+    ai_error(NULL)
+    df = data_state()
+
+    if (is.null(df) || nrow(df) == 0) {
+      msg = "No query data available. Click Run Query first."
+      ai_state(NULL)
+      ai_error(msg)
+      showNotification(msg, type = "error")
+      return()
+    }
+
+    stats = compute_summary_stats(df)
+    params = list(
+      industry_labels = selected_industry_labels(),
+      start_month = input$start_month,
+      end_month = input$end_month,
+      data_type = input$data_type,
+      endpoint = MRTS_ENDPOINTS[1]
+    )
+
+    report = tryCatch(
+      generate_ai_report(stats, params),
+      error = function(e) e
+    )
+
+    if (inherits(report, "error")) {
+      msg = conditionMessage(report)
+      ai_state(NULL)
+      ai_error(msg)
+      showNotification(glue("AI generation failed: {msg}"), type = "error")
+      return()
+    }
+
+    # Safely extract attributes with defaults
+    model_attr = attr(report, "model_used")
+    backend_attr = attr(report, "backend")
+    
+    ai_state(list(
+      text = as.character(report),
+      model = if (is.null(model_attr)) "unknown" else as.character(model_attr),
+      backend = if (is.null(backend_attr)) "unknown" else as.character(backend_attr),
+      stats = stats,
+      params = params
+    ))
+    ai_generated_at(Sys.time())
+    showNotification("AI report generated successfully.", type = "message")
+  }, ignoreInit = TRUE)
+
+  output$ai_status = renderUI({
+    err = ai_error()
+    ai = ai_state()
+    if (!is.null(err)) {
+      return(div(class = "alert alert-danger", strong("AI Error: "), err))
+    }
+    if (is.null(ai)) {
+      return(div(class = "alert alert-info", "Click 'Generate AI Report' after running a query."))
+    }
+    div(class = "alert alert-success", "AI report is ready.")
+  })
+
+  output$ai_metadata = renderTable({
+    ai = ai_state()
+    req(ai)
+    # Ensure ai is a list and has required fields
+    if (!is.list(ai)) {
+      return(data.frame(Field = "Error", Value = "Invalid AI state", stringsAsFactors = FALSE))
+    }
+    # Safely access nested fields with defaults
+    industry_labels = if (is.list(ai$params) && !is.null(ai$params$industry_labels)) {
+      paste(ai$params$industry_labels, collapse = ", ")
+    } else { "N/A" }
+    
+    start_month = if (is.list(ai$params) && !is.null(ai$params$start_month)) {
+      ai$params$start_month
+    } else { "N/A" }
+    
+    end_month = if (is.list(ai$params) && !is.null(ai$params$end_month)) {
+      ai$params$end_month
+    } else { "N/A" }
+    
+    total_rows = if (is.list(ai$stats) && !is.null(ai$stats$total_rows)) {
+      ai$stats$total_rows
+    } else { 0 }
+    
+    backend = if (!is.null(ai$backend)) ai$backend else "unknown"
+    model = if (!is.null(ai$model)) ai$model else "unknown"
+    
+    endpoint = if (is.list(ai$params) && !is.null(ai$params$endpoint)) {
+      ai$params$endpoint
+    } else { "N/A" }
+    
+    data.frame(
+      Field = c("Industries selected", "Date range", "Rows", "Generated at", "Model used", "Endpoint"),
+      Value = c(
+        industry_labels,
+        paste(start_month, "to", end_month),
+        total_rows,
+        as.character(ai_generated_at()),
+        paste(backend, "-", model),
+        endpoint
+      ),
+      stringsAsFactors = FALSE
+    )
+  }, striped = TRUE, bordered = TRUE, spacing = "s")
+
+  output$ai_report_text = renderText({
+    ai = ai_state()
+    if (is.null(ai)) {
+      return("No report generated yet.")
+    }
+    # Ensure ai is a list before accessing with $
+    if (!is.list(ai)) {
+      return("Error: Invalid AI state format.")
+    }
+    # Ensure text is always a character string
+    txt = if (!is.null(ai$text)) ai$text else ""
+    if (is.null(txt)) return("")
+    if (!is.character(txt)) txt = as.character(txt)
+    txt
+  })
+
+  output$download_report = downloadHandler(
+    filename = function() {
+      paste0("mrts_ai_report_", format(Sys.Date(), "%Y%m%d"), ".md")
+    },
+    content = function(file) {
+      ai = ai_state()
+      if (is.null(ai)) {
+        showNotification("Generate AI Report before downloading.", type = "error")
+        writeLines("No AI report generated yet. Please click 'Generate AI Report' first.", file)
+        return()
+      }
+
+      # Safely access nested fields
+      if (!is.list(ai) || !is.list(ai$stats) || is.null(ai$stats$per_industry)) {
+        stats_tbl = data.frame()
+      } else {
+        stats_tbl = ai$stats$per_industry %>%
+          mutate(across(where(is.numeric), ~ round(.x, 2)))
+      }
+
+      # Safely extract params with defaults
+      industry_labels = if (is.list(ai$params) && !is.null(ai$params$industry_labels)) {
+        paste(ai$params$industry_labels, collapse = ", ")
+      } else { "N/A" }
+      
+      start_month = if (is.list(ai$params) && !is.null(ai$params$start_month)) {
+        ai$params$start_month
+      } else { "N/A" }
+      
+      end_month = if (is.list(ai$params) && !is.null(ai$params$end_month)) {
+        ai$params$end_month
+      } else { "N/A" }
+      
+      data_type = if (is.list(ai$params) && !is.null(ai$params$data_type)) {
+        ai$params$data_type
+      } else { "N/A" }
+      
+      endpoint = if (is.list(ai$params) && !is.null(ai$params$endpoint)) {
+        ai$params$endpoint
+      } else { "N/A" }
+      
+      backend = if (!is.null(ai$backend)) ai$backend else "unknown"
+      model = if (!is.null(ai$model)) ai$model else "unknown"
+
+      header = c(
+        "# AI-Powered MRTS Report",
+        "",
+        glue("- Generated: {format(Sys.time(), '%Y-%m-%d %H:%M:%S')}"),
+        glue("- Industries: {industry_labels}"),
+        glue("- Date range: {start_month} to {end_month}"),
+        glue("- Data type: {data_type}"),
+        glue("- Endpoint: {endpoint}"),
+        glue("- Model: {backend} / {model}"),
+        ""
+      )
+
+      stats_lines = if (nrow(stats_tbl) > 0) {
+        capture.output(print(stats_tbl, row.names = FALSE))
+      } else {
+        "No statistics available."
+      }
+      
+      report_text = if (!is.null(ai$text) && is.character(ai$text)) {
+        ai$text
+      } else if (!is.null(ai$text)) {
+        as.character(ai$text)
+      } else {
+        "No report text available."
+      }
+      
+      report_lines = c(
+        header,
+        "## AI Report",
+        "",
+        report_text,
+        "",
+        "## Data Summary (Per-Industry Stats)",
+        "",
+        "```",
+        stats_lines,
+        "```"
+      )
+      writeLines(report_lines, file)
+    }
+  )
+}
 
 shinyApp(ui = ui, server = server)

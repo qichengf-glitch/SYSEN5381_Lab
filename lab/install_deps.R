@@ -3,7 +3,8 @@
 
 pkgs = c(
   "shiny", "bslib", "DT", "httr", "jsonlite",
-  "dplyr", "purrr", "readr", "tidyr", "ggplot2"
+  "dplyr", "purrr", "readr", "tidyr", "ggplot2",
+  "lubridate", "glue"
 )
 
 missing = pkgs[!sapply(pkgs, function(p) requireNamespace(p, quietly = TRUE))]

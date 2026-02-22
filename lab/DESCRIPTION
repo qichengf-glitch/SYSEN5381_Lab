@@ -13,4 +13,6 @@ Imports:
   purrr,
   readr,
   tidyr,
-  ggplot2
+  ggplot2,
+  lubridate,
+  glue
