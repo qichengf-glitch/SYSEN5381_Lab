@@ -303,15 +303,16 @@ server = function(input, output, session) {
         ))
       }
 
+      safe_df[] = lapply(safe_df, as.character)
+      names(safe_df) = make.names(names(safe_df), unique = TRUE)
+
       datatable(
         safe_df,
         options = list(
           pageLength = 15,
           scrollX = TRUE,
-          dom = "Bfrtip",
-          buttons = c("copy", "csv", "excel")
+          dom = "ftip"
         ),
-        extensions = "Buttons",
         rownames = FALSE
       )
     }, error = function(e) {
@@ -324,7 +325,7 @@ server = function(input, output, session) {
         rownames = FALSE
       )
     })
-  })
+  }, server = FALSE)
 
   trend_df = reactive({
     df = data_state()
@@ -363,8 +364,10 @@ server = function(input, output, session) {
           filter(data_type == primary_dtype)
       }
       
-      # Calculate derived metrics on the filtered primary sequence (safely)
+      # Aggregate to one point per industry-month, then calculate derived metrics
       df_filtered %>%
+        group_by(industry, month) %>%
+        summarise(value = sum(value, na.rm = TRUE), .groups = "drop") %>%
         arrange(industry, month) %>%
         group_by(industry) %>%
         mutate(
@@ -418,34 +421,43 @@ server = function(input, output, session) {
       return(invisible(NULL))
     }
 
-    # Create the plot using ggplot2
     tryCatch({
-      # Determine primary data_type for title
-      primary_dtype = if (input$data_type == "default") "SM" else input$data_type
-      data_type_label = if (primary_dtype == "SM") "Sales (SM)" else if (primary_dtype == "IM") "Inventories (IM)" else "Default"
-      
-      plot_title = glue("Monthly Retail Trend by Industry ({data_type_label})")
-      
-      p = ggplot(df_plot, aes(x = month, y = .data[[y_col]], color = industry, group = industry)) +
-        geom_line(linewidth = 1.2, na.rm = TRUE) +
-        geom_point(size = 2, na.rm = TRUE, alpha = 0.7) +
-        labs(
-          title = plot_title,
-          x = "Month",
-          y = y_label,
-          color = "Industry",
-          caption = glue("Data type: {data_type_label}. Each line represents a single consistent series.")
-        ) +
-        theme_minimal(base_size = 13) +
-        theme(
-          legend.position = "bottom",
-          plot.title = element_text(hjust = 0.5, face = "bold"),
-          plot.caption = element_text(size = 9, hjust = 0),
-          axis.text.x = element_text(angle = 45, hjust = 1)
-        ) +
-        scale_x_date(date_labels = "%Y-%m", date_breaks = "6 months")
-      
-      print(p)
+      # Use base plotting here to avoid device/text rendering regressions in some deployments
+      wide_df = df_plot %>%
+        select(month, industry, y = all_of(y_col)) %>%
+        tidyr::pivot_wider(names_from = industry, values_from = y, values_fn = mean) %>%
+        arrange(month)
+
+      x = as.Date(wide_df$month)
+      y_mat = as.matrix(wide_df[, setdiff(names(wide_df), "month"), drop = FALSE])
+      storage.mode(y_mat) = "double"
+
+      if (length(x) == 0 || ncol(y_mat) == 0) {
+        plot.new()
+        text(0.5, 0.5, "No valid series to plot.")
+        return(invisible(NULL))
+      }
+
+      yr = range(y_mat, na.rm = TRUE)
+      if (!all(is.finite(yr))) {
+        plot.new()
+        text(0.5, 0.5, "No finite values to plot.")
+        return(invisible(NULL))
+      }
+
+      cols = grDevices::hcl.colors(max(3, ncol(y_mat)), "Dark 3")[seq_len(ncol(y_mat))]
+      plot(
+        x, y_mat[, 1],
+        type = "l", lwd = 2, col = cols[1],
+        xlab = "Month", ylab = y_label, ylim = yr,
+        main = "Monthly Retail Trend by Industry"
+      )
+      if (ncol(y_mat) > 1) {
+        for (i in 2:ncol(y_mat)) {
+          lines(x, y_mat[, i], col = cols[i], lwd = 2)
+        }
+      }
+      legend("topright", legend = colnames(y_mat), col = cols, lty = 1, lwd = 2, bty = "n", cex = 0.85)
     }, error = function(e) {
       plot.new()
       text(0.5, 0.5, paste("Plot error:", conditionMessage(e)), cex = 1.2)
