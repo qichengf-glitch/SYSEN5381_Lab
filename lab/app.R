@@ -145,27 +145,11 @@ server = function(input, output, session) {
         multiple = FALSE
       )
     } else {
-      fluidRow(
-        column(
-          width = 6,
-          selectizeInput(
-            "industries_multi_pick",
-            "Pick candidate industries",
-            choices = MRTS_INDUSTRIES,
-            selected = unname(MRTS_INDUSTRIES)[1:2],
-            multiple = TRUE,
-            options = list(placeholder = "Search industries")
-          )
-        ),
-        column(
-          width = 6,
-          checkboxGroupInput(
-            "industries_multi_checked",
-            "Apply (check exactly 2)",
-            choices = MRTS_INDUSTRIES,
-            selected = unname(MRTS_INDUSTRIES)[1:2]
-          )
-        )
+      checkboxGroupInput(
+        "industries_multi_checked",
+        "Apply industries (check 2)",
+        choices = MRTS_INDUSTRIES,
+        selected = unname(MRTS_INDUSTRIES)[1:2]
       )
     }
   })
@@ -175,10 +159,7 @@ server = function(input, output, session) {
       if (is.null(input$industries_single) || !nzchar(input$industries_single)) return(character(0))
       return(input$industries_single)
     }
-    checked = input$industries_multi_checked %||% character(0)
-    picked = input$industries_multi_pick %||% character(0)
-    if (length(checked) > 0) return(checked)
-    picked
+    input$industries_multi_checked %||% character(0)
   })
 
   labels_from_codes = function(codes) {
@@ -218,22 +199,37 @@ server = function(input, output, session) {
       return()
     }
 
-    probe_params = list(
-      industries = raw_selected,
-      start_month = input$start_month,
-      end_month = input$start_month,
-      data_type = input$data_type
-    )
+    if (!nzchar(Sys.getenv("CENSUS_API_KEY"))) {
+      showNotification("API check failed: CENSUS_API_KEY is not set.", type = "error", duration = 8)
+      return()
+    }
 
-    probe = withProgress(message = "Checking API with selected industry(ies)...", value = 0, {
-      incProgress(0.3, detail = "Running probe")
-      res = tryCatch(fetch_mrts_data(probe_params), error = function(e) e)
-      incProgress(1, detail = "Done")
-      res
+    probe = withProgress(message = "Checking MRTS API connectivity...", value = 0, {
+      incProgress(0.4, detail = "Calling API")
+      probe_query = list(
+        get = "data_type_code,time_slot_id,seasonally_adj,category_code,cell_value",
+        `for` = "us:*",
+        time = "2023",
+        seasonally_adj = "no",
+        key = Sys.getenv("CENSUS_API_KEY")
+      )
+      resp = try(httr::GET(MRTS_ENDPOINTS[1], query = probe_query, timeout(10)), silent = TRUE)
+      if (inherits(resp, "try-error")) {
+        return(list(ok = FALSE, msg = as.character(resp)))
+      }
+      if (httr::status_code(resp) != 200) {
+        txt = httr::content(resp, "text", encoding = "UTF-8")
+        return(list(ok = FALSE, msg = sanitize_api_error(txt)))
+      }
+      parsed = try(jsonlite::fromJSON(httr::content(resp, "text", encoding = "UTF-8"), simplifyVector = FALSE), silent = TRUE)
+      if (inherits(parsed, "try-error") || !is.list(parsed) || length(parsed) < 2) {
+        return(list(ok = FALSE, msg = "Probe returned invalid response body."))
+      }
+      list(ok = TRUE, msg = "OK")
     })
 
-    if (inherits(probe, "error")) {
-      showNotification(glue("API check failed: {conditionMessage(probe)}"), type = "error", duration = 8)
+    if (!isTRUE(probe$ok)) {
+      showNotification(glue("API check failed: {probe$msg}"), type = "error", duration = 8)
       return()
     }
 
@@ -247,19 +243,19 @@ server = function(input, output, session) {
     ai_generated_at(NULL)
     data_error(NULL)
 
-    industries = confirmed_industries()
+    industries = selected_industries()
     if (length(industries) == 0) {
-      msg = "No confirmed industries. Select industry(ies), click 'Confirm Selected Industry(ies)', then Run Query."
+      msg = "No industry selected. Please check 1 or 2 industries first."
       data_state(NULL)
       data_error(msg)
       showNotification(msg, type = "error")
       return()
     }
-    if (!setequal(selected_industries(), industries)) {
-      msg = "Industry selection changed after confirmation. Please click 'Confirm Selected Industry(ies)' again."
+    if (identical(input$industry_mode, "multi") && length(industries) != 2) {
+      msg = "In Multi-select mode, please check exactly 2 industries."
       data_state(NULL)
       data_error(msg)
-      showNotification(msg, type = "warning")
+      showNotification(msg, type = "error")
       return()
     }
 
@@ -318,8 +314,14 @@ server = function(input, output, session) {
   output$sidebar_status = renderUI({
     data = data_state()
     key_set = nzchar(Sys.getenv("CENSUS_API_KEY"))
+    current_labels = selected_industry_labels()
     tags$div(
       p(if (key_set) "CENSUS_API_KEY: set" else "CENSUS_API_KEY: not set", class = if (key_set) "text-success" else "text-danger"),
+      p(
+        if (length(current_labels) == 0) "Current selected: none"
+        else glue("Current selected: {paste(current_labels, collapse = ', ')}"),
+        class = if (length(current_labels) == 0) "text-warning" else "text-info"
+      ),
       p(
         if (length(confirmed_industries()) == 0) "Industry confirm: pending"
         else glue("Industry confirm: {paste(confirmed_industry_labels(), collapse = ', ')}"),
@@ -591,7 +593,7 @@ server = function(input, output, session) {
     # Compute stats only on primary sequence
     stats = compute_summary_stats(df_primary)
     params = list(
-      industry_labels = confirmed_industry_labels(),
+      industry_labels = selected_industry_labels(),
       start_month = input$start_month,
       end_month = input$end_month,
       data_type = input$data_type,
