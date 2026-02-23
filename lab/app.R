@@ -145,13 +145,27 @@ server = function(input, output, session) {
         multiple = FALSE
       )
     } else {
-      selectizeInput(
-        "industries_multi",
-        "Industries (NAICS/category)",
-        choices = MRTS_INDUSTRIES,
-        selected = unname(MRTS_INDUSTRIES)[1:2],
-        multiple = TRUE,
-        options = list(placeholder = "Select one or more industries")
+      fluidRow(
+        column(
+          width = 6,
+          selectizeInput(
+            "industries_multi_pick",
+            "Pick candidate industries",
+            choices = MRTS_INDUSTRIES,
+            selected = unname(MRTS_INDUSTRIES)[1:2],
+            multiple = TRUE,
+            options = list(placeholder = "Search industries")
+          )
+        ),
+        column(
+          width = 6,
+          checkboxGroupInput(
+            "industries_multi_checked",
+            "Apply (check exactly 2)",
+            choices = MRTS_INDUSTRIES,
+            selected = unname(MRTS_INDUSTRIES)[1:2]
+          )
+        )
       )
     }
   })
@@ -161,7 +175,10 @@ server = function(input, output, session) {
       if (is.null(input$industries_single) || !nzchar(input$industries_single)) return(character(0))
       return(input$industries_single)
     }
-    input$industries_multi %||% character(0)
+    checked = input$industries_multi_checked %||% character(0)
+    picked = input$industries_multi_pick %||% character(0)
+    if (length(checked) > 0) return(checked)
+    picked
   })
 
   labels_from_codes = function(codes) {
