@@ -80,6 +80,8 @@ ui = fluidPage(
         selected = "multi"
       ),
       uiOutput("industry_selector_ui"),
+      actionButton("confirm_industries", "Confirm Selected Industry(ies)", class = "btn-warning"),
+      uiOutput("industry_confirm_status"),
       selectInput("start_month", "Start month (YYYY-MM)", choices = month_opts, selected = "2020-01"),
       selectInput("end_month", "End month (YYYY-MM)", choices = month_opts, selected = tail(month_opts, 1)),
       selectInput("data_type", "Data type", choices = MRTS_DATA_TYPES, selected = "default"),
@@ -131,6 +133,7 @@ server = function(input, output, session) {
   ai_state = reactiveVal(NULL)
   ai_error = reactiveVal(NULL)
   ai_generated_at = reactiveVal(NULL)
+  confirmed_industries = reactiveVal(character(0))
 
   output$industry_selector_ui = renderUI({
     if (identical(input$industry_mode, "single")) {
@@ -161,11 +164,65 @@ server = function(input, output, session) {
     input$industries_multi %||% character(0)
   })
 
-  selected_industry_labels = reactive({
-    codes = selected_industries()
+  labels_from_codes = function(codes) {
     labels = names(MRTS_INDUSTRIES)[match(codes, unname(MRTS_INDUSTRIES))]
     ifelse(is.na(labels), codes, labels)
+  }
+
+  selected_industry_labels = reactive({
+    labels_from_codes(selected_industries())
   })
+
+  confirmed_industry_labels = reactive({
+    labels_from_codes(confirmed_industries())
+  })
+
+  output$industry_confirm_status = renderUI({
+    confirmed = confirmed_industries()
+    if (length(confirmed) == 0) {
+      return(tags$p("No confirmed industries yet.", class = "text-warning"))
+    }
+    tags$p(glue("Confirmed: {paste(confirmed_industry_labels(), collapse = ', ')}"), class = "text-success")
+  })
+
+  observeEvent(input$confirm_industries, {
+    raw_selected = selected_industries()
+
+    if (identical(input$industry_mode, "multi") && length(raw_selected) != 2) {
+      showNotification("Please select exactly 2 industries in Multi-select mode, then click confirm.", type = "error")
+      return()
+    }
+    if (identical(input$industry_mode, "single") && length(raw_selected) != 1) {
+      showNotification("Please select 1 industry in Single-select mode, then click confirm.", type = "error")
+      return()
+    }
+    if (input$start_month > input$end_month) {
+      showNotification("Start month must be <= end month before confirming.", type = "error")
+      return()
+    }
+
+    probe_params = list(
+      industries = raw_selected,
+      start_month = input$start_month,
+      end_month = input$start_month,
+      data_type = input$data_type
+    )
+
+    probe = withProgress(message = "Checking API with selected industry(ies)...", value = 0, {
+      incProgress(0.3, detail = "Running probe")
+      res = tryCatch(fetch_mrts_data(probe_params), error = function(e) e)
+      incProgress(1, detail = "Done")
+      res
+    })
+
+    if (inherits(probe, "error")) {
+      showNotification(glue("API check failed: {conditionMessage(probe)}"), type = "error", duration = 8)
+      return()
+    }
+
+    confirmed_industries(raw_selected)
+    showNotification(glue("Confirmed {length(raw_selected)} industry(ies). API probe passed."), type = "message", duration = 6)
+  }, ignoreInit = TRUE)
 
   observeEvent(input$run_query, {
     ai_state(NULL)
@@ -173,12 +230,19 @@ server = function(input, output, session) {
     ai_generated_at(NULL)
     data_error(NULL)
 
-    industries = selected_industries()
+    industries = confirmed_industries()
     if (length(industries) == 0) {
-      msg = "No industry selected. Choose one or more industries, then click Run Query."
+      msg = "No confirmed industries. Select industry(ies), click 'Confirm Selected Industry(ies)', then Run Query."
       data_state(NULL)
       data_error(msg)
       showNotification(msg, type = "error")
+      return()
+    }
+    if (!setequal(selected_industries(), industries)) {
+      msg = "Industry selection changed after confirmation. Please click 'Confirm Selected Industry(ies)' again."
+      data_state(NULL)
+      data_error(msg)
+      showNotification(msg, type = "warning")
       return()
     }
 
@@ -239,6 +303,11 @@ server = function(input, output, session) {
     key_set = nzchar(Sys.getenv("CENSUS_API_KEY"))
     tags$div(
       p(if (key_set) "CENSUS_API_KEY: set" else "CENSUS_API_KEY: not set", class = if (key_set) "text-success" else "text-danger"),
+      p(
+        if (length(confirmed_industries()) == 0) "Industry confirm: pending"
+        else glue("Industry confirm: {paste(confirmed_industry_labels(), collapse = ', ')}"),
+        class = if (length(confirmed_industries()) == 0) "text-warning" else "text-success"
+      ),
       p(if (is.null(data)) "No query run yet." else glue("Current rows: {nrow(data)}"), class = "text-muted")
     )
   })
@@ -505,7 +574,7 @@ server = function(input, output, session) {
     # Compute stats only on primary sequence
     stats = compute_summary_stats(df_primary)
     params = list(
-      industry_labels = selected_industry_labels(),
+      industry_labels = confirmed_industry_labels(),
       start_month = input$start_month,
       end_month = input$end_month,
       data_type = input$data_type,
