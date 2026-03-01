@@ -26,6 +26,6 @@ jobs:
         with:
           url: ${{ secrets.CONNECT_SERVER }}
           api-key: ${{ secrets.CONNECT_API_KEY }}
-          dir: lab
+          dir: lab:qichengfu-sysen5381-lab
           show-logs: true
           force: false
