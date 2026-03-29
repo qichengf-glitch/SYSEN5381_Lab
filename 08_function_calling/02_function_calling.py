@@ -51,6 +51,25 @@ def add_two_numbers(x, y):
     """
     return x + y
 
+# Define a second function to be used as a tool
+def multiply_numbers(x, y):
+    """
+    Multiply two numbers together.
+
+    Parameters:
+    -----------
+    x : float
+        First number
+    y : float
+        Second number
+
+    Returns:
+    --------
+    float
+        Product of x and y
+    """
+    return x * y
+
 # 2. DEFINE TOOL METADATA ###################################
 
 # Define the tool metadata as a dictionary
@@ -77,18 +96,40 @@ tool_add_two_numbers = {
     }
 }
 
+tool_multiply_numbers = {
+    "type": "function",
+    "function": {
+        "name": "multiply_numbers",
+        "description": "Multiply two numbers",
+        "parameters": {
+            "type": "object",
+            "required": ["x", "y"],
+            "properties": {
+                "x": {
+                    "type": "number",
+                    "description": "first number"
+                },
+                "y": {
+                    "type": "number",
+                    "description": "second number"
+                }
+            }
+        }
+    }
+}
+
 # 3. CREATE CHAT REQUEST WITH TOOLS ###################################
 
 # Create a simple chat history with a user question that will require the tool
 messages = [
-    {"role": "user", "content": "What is 3 + 2?"}
+    {"role": "user", "content": "What is 4 multiplied by 7?"}
 ]
 
 # Build the request body with tools
 body = {
     "model": MODEL,
     "messages": messages,
-    "tools": [tool_add_two_numbers],
+    "tools": [tool_add_two_numbers, tool_multiply_numbers],
     "stream": False
 }
 
@@ -107,7 +148,8 @@ if "tool_calls" in result.get("message", {}):
     # Execute each tool call
     for tool_call in tool_calls:
         func_name = tool_call["function"]["name"]
-        func_args = json.loads(tool_call["function"]["arguments"])
+        raw_args = tool_call["function"]["arguments"]
+        func_args = raw_args if isinstance(raw_args, dict) else json.loads(raw_args)
         
         # Get the function from globals and execute it
         func = globals().get(func_name)
