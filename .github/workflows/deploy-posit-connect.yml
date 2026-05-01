@@ -25,22 +25,42 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check required secrets
+        id: precheck
+        run: |
+          missing=0
+          [ -z "$CONNECT_SERVER" ] && missing=1
+          [ -z "$CONNECT_ACCOUNT" ] && missing=1
+          [ -z "$CONNECT_API_KEY" ] && missing=1
+          [ -z "$CONNECT_API_SECRET" ] && missing=1
+          if [ "$missing" -eq 1 ]; then
+            echo "can_deploy=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping deploy: one or more required Connect secrets are missing."
+          else
+            echo "can_deploy=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Resolve defaults
+        if: steps.precheck.outputs.can_deploy == 'true'
         run: |
           echo "APP_DIR=${APP_DIR:-lab}" >> "$GITHUB_ENV"
 
       - name: Setup R
+        if: steps.precheck.outputs.can_deploy == 'true'
         uses: r-lib/actions/setup-r@v2
         with:
           use-public-rspm: true
 
       - name: Install rsconnect
+        if: steps.precheck.outputs.can_deploy == 'true'
         run: Rscript -e 'install.packages("rsconnect", repos = "https://cloud.r-project.org")'
 
       - name: Build manifest.json
+        if: steps.precheck.outputs.can_deploy == 'true'
         run: Rscript 04_deployment/positconnect/shinyr/manifestme.R "$APP_DIR"
 
       - name: Deploy app to Posit Connect
+        if: steps.precheck.outputs.can_deploy == 'true'
         run: |
           Rscript - <<'EOF'
           required <- c("CONNECT_SERVER", "CONNECT_ACCOUNT", "CONNECT_API_KEY", "CONNECT_API_SECRET")
