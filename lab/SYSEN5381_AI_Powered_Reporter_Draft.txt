@@ -1,0 +1,122 @@
+SYSEN 5381 — AI-Powered Reporter Software (Draft for Submission)
+
+Important note:
+This draft is a starting point. Please edit and personalize the writing section so it is truly in your own words before submission.
+
+================================================================================
+1) Writing Component (Draft — please revise in your own words)
+================================================================================
+
+Paragraph 1 — What the software does
+My software is an AI-powered reporting dashboard built with R Shiny for U.S. Census Monthly Retail Trade Survey (MRTS) data. The app lets users choose industries, a time range, and a data type, then query the Census API and display processed results in a table and trend chart. After data is loaded, the app can generate an AI-written business summary that explains major trends, comparisons, and notable months.
+
+Paragraph 2 — How components work together
+The system has three connected layers: API integration, web interface, and AI reporting. First, the API layer requests MRTS time-series data from the Census endpoint, parses returned fields, and standardizes column names and dates. Second, the Shiny UI layer provides input controls, validation, and tab-based outputs (Data, Trends, AI Report). Third, the AI layer computes summary statistics from the processed dataset and sends a structured prompt to OpenAI (or Ollama if configured) to generate a concise report that includes executive summary, key findings, and data notes.
+
+Paragraph 3 — Design choices and challenges
+I made several design choices to improve reliability in deployment and grading contexts. I added explicit error handling for missing selections, invalid date ranges, empty API responses, and missing AI credentials. I also added an industry confirmation workflow and API probe step to reduce user confusion before running full queries. A major challenge was handling differences between local and cloud environments (package/runtime differences, environment variables, and deployment caching), which required stricter type conversion, safer rendering for table/plot outputs, and clearer status messages in the app.
+
+================================================================================
+2) Git Repository Links
+================================================================================
+
+Repository root:
+https://github.com/qichengf-glitch/SYSEN5381_Lab
+
+API query script (Lab 1 related):
+https://github.com/qichengf-glitch/SYSEN5381_Lab/blob/main/lab/lab1.R
+
+Shiny app code:
+https://github.com/qichengf-glitch/SYSEN5381_Lab/blob/main/lab/app.R
+
+AI reporting script (LLM + prompt + summary logic):
+https://github.com/qichengf-glitch/SYSEN5381_Lab/blob/main/lab/mrts_helpers.R
+
+Main application file:
+https://github.com/qichengf-glitch/SYSEN5381_Lab/blob/main/lab/app.R
+
+================================================================================
+3) Screenshots / Outputs (Insert 3–4 images)
+================================================================================
+
+Screenshot 1 — Shiny app interface with input controls
+[Insert screenshot showing sidebar controls: industry, date range, data type, buttons]
+
+Screenshot 2 — Data tab with loaded table
+[Insert screenshot showing queried data rows in Data tab]
+
+Screenshot 3 — Trends tab with time-series chart
+[Insert screenshot showing line chart]
+
+Screenshot 4 — AI report tab output
+[Insert screenshot showing generated AI summary + metadata]
+
+(Recommended optional screenshot)
+Screenshot 5 — Error handling message
+[Insert screenshot showing one error case, e.g., missing AI key or invalid selection]
+
+================================================================================
+4) Documentation
+================================================================================
+
+4.1 Data Summary Table (processed dataset used in app)
+
+Column Name      | Data Type | Description
+-----------------|----------|--------------------------------------------------------
+industry_code    | character | Selected/aggregated industry code (e.g., 44X72, 44X45)
+industry         | character | Industry label shown in UI
+month            | Date      | Parsed monthly date used for time-series plotting
+month_str        | character | Month string in YYYY-MM format
+data_type        | character | MRTS data type code (e.g., SM for sales, IM for inventories)
+seasonally_adj   | character | Seasonal adjustment flag from API response
+value            | numeric   | Aggregated metric value used in table/chart/report
+
+4.2 Technical Details
+
+API endpoint used:
+https://api.census.gov/data/timeseries/eits/mrts
+
+Core R packages:
+shiny, bslib, DT, httr, jsonlite, dplyr, tidyr, ggplot2, purrr, lubridate, glue
+
+Environment variables:
+- CENSUS_API_KEY: required for MRTS API requests
+- OPENAI_API_KEY: required for OpenAI report generation
+- OPENAI_MODEL: optional (default can be set, e.g., gpt-4o-mini)
+- OLLAMA_MODEL + OLLAMA_HOST: optional alternative AI backend
+
+Project structure (key files):
+- lab/app.R                  # main Shiny application
+- lab/mrts_helpers.R         # API fetch, stats, AI report functions
+- lab/Dockerfile             # deployment container setup
+- lab/install_deps.R         # package installation helper
+
+4.3 Usage Instructions
+
+Local run:
+1) Install dependencies (if needed)
+   - Open R and run required package installs or use install_deps.R
+2) Set API keys
+   - Sys.setenv(CENSUS_API_KEY = "YOUR_CENSUS_KEY")
+   - Sys.setenv(OPENAI_API_KEY = "YOUR_OPENAI_KEY")   # for AI report
+3) Launch app
+   - shiny::runApp("lab")
+4) In app: select industries and date range, click Run Query, then Generate AI Report.
+
+Cloud deployment (DigitalOcean App Platform):
+1) Deploy from GitHub repo and set source directory to lab
+2) Ensure environment variables are set in App Settings:
+   - CENSUS_API_KEY
+   - OPENAI_API_KEY
+3) Redeploy after variable changes
+4) Verify app loads Data/Trends tabs and AI Report generation.
+
+================================================================================
+Submission checklist (quick)
+================================================================================
+
+[ ] Writing section edited into your own words (3+ paragraphs)
+[ ] All GitHub links clickable and correct
+[ ] 3–4 screenshots inserted
+[ ] Data summary table included
+[ ] Setup and run instructions included

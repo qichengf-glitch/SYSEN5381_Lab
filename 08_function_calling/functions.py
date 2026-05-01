@@ -9,6 +9,7 @@
 
 ## 0.1 Load Packages #################################
 
+import sys  # for resolving tool functions in the caller's __main__
 import requests  # for HTTP requests
 import json      # for working with JSON
 import pandas as pd  # for data manipulation
@@ -23,6 +24,18 @@ DEFAULT_MODEL = "smollm2:1.7b"
 PORT = 11434
 OLLAMA_HOST = f"http://localhost:{PORT}"
 CHAT_URL = f"{OLLAMA_HOST}/api/chat"
+
+
+def _resolve_tool_function(name):
+    """Look up a tool by name in this module, then in the running script (__main__)."""
+    func = globals().get(name)
+    if func is not None:
+        return func
+    main = sys.modules.get("__main__")
+    if main is not None:
+        return getattr(main, name, None)
+    return None
+
 
 # 1. AGENT FUNCTION ###################################
 
@@ -83,10 +96,11 @@ def agent(messages, model=DEFAULT_MODEL, output="text", tools=None, all=False):
                 # Execute the tool function
                 # Note: Tool functions must be defined in the global scope
                 func_name = tool_call["function"]["name"]
-                func_args = json.loads(tool_call["function"]["arguments"])
+                raw_args = tool_call["function"]["arguments"]
+                func_args = raw_args if isinstance(raw_args, dict) else json.loads(raw_args)
                 
-                # Get the function from globals and execute it
-                func = globals().get(func_name)
+                # Get the function from globals or __main__ and execute it
+                func = _resolve_tool_function(func_name)
                 if func:
                     output = func(**func_args)
                     tool_call["output"] = output

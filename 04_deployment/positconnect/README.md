@@ -16,7 +16,14 @@
 
 Complete these activities in order:
 
-1. [ACTIVITY: Deploy to Posit Connect](ACTIVITY_posit_connect.md) — *Details forthcoming*
+1. [ACTIVITY: Deploy to Posit Connect](ACTIVITY_posit_connect.md)
+
+## Templates Included
+
+- `shinyr/manifestme.R`
+- `plumber/manifestme.R`
+- `shinypy/manifestme.sh`
+- `fastapi/manifestme.sh`
 
 ---
 

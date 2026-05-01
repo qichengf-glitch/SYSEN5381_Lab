@@ -12,8 +12,9 @@ rules:
       **1. Output Format:**
       - Always return results as a well-formatted markdown table
       - Include column headers that are clear and descriptive
-      - Use consistent formatting (dates, numbers, text)
-      - Sort results by most relevant metric (e.g., date, severity, count)
+      - Limit the table to 5 rows maximum
+      - Sort results by highest count first
+      - Round percentages to 1 decimal place
 
       **2. Data Quality:**
       - Only include records with complete information
@@ -21,9 +22,8 @@ rules:
       - Clearly indicate if data is limited or incomplete
 
       **3. Presentation:**
-      - Keep tables concise (max 10-15 rows for readability)
-      - Include summary statistics when relevant
       - Use clear, professional language
+      - After the table, include exactly 3 bullet points summarizing the key findings
 
   press_release:
   - id: "press-release-standards"
@@ -57,4 +57,3 @@ rules:
       - Target 300-400 words for a 1-page press release
       - Include a brief summary at the end
       - No fluff - every sentence should add value
-

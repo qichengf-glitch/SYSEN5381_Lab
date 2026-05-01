@@ -11,7 +11,7 @@
 
 import requests  # for HTTP requests
 import json      # for working with JSON
-import pandas as pd  # for data manipulation
+# pandas is imported inside df_as_text() only, so importing agent_run does not load pandas.
 
 # If you haven't already, install these packages...
 # pip install requests pandas
@@ -23,6 +23,8 @@ DEFAULT_MODEL = "smollm2:135m"
 PORT = 11434
 OLLAMA_HOST = f"http://localhost:{PORT}"
 CHAT_URL = f"{OLLAMA_HOST}/api/chat"
+# Seconds; avoids hanging indefinitely when Ollama is down or slow.
+REQUEST_TIMEOUT = 120
 
 # 1. AGENT FUNCTION ###################################
 
@@ -58,7 +60,7 @@ def agent(messages, model=DEFAULT_MODEL, output="text", tools=None, all=False):
             "stream": False
         }
         
-        response = requests.post(CHAT_URL, json=body)
+        response = requests.post(CHAT_URL, json=body, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         result = response.json()
         
@@ -72,7 +74,7 @@ def agent(messages, model=DEFAULT_MODEL, output="text", tools=None, all=False):
             "stream": False
         }
         
-        response = requests.post(CHAT_URL, json=body)
+        response = requests.post(CHAT_URL, json=body, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         result = response.json()
         
@@ -150,8 +152,7 @@ def df_as_text(df):
     str
         A markdown-formatted table string
     """
-    
-    # Convert DataFrame to markdown table
+    # Convert DataFrame to markdown table (caller passes a pandas DataFrame; no top-level pandas import)
     # pandas to_markdown() method creates markdown tables
     tab = df.to_markdown(index=False)
     return tab

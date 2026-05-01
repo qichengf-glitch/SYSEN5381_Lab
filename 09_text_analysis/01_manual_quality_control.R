@@ -11,21 +11,52 @@
 ## 0.1 Load Packages #################################
 
 # If you haven't already, install required packages:
-# install.packages(c("dplyr", "stringr", "readr"))
+# install.packages(c("dplyr", "stringr", "readr", "tibble"))
 
 library(dplyr)   # for data wrangling and pipelines
 library(stringr) # for string pattern matching and text analysis
 library(readr)   # for reading text files
+library(tibble)  # for tibble()
 
 ## 0.2 Load Sample Text ####################################
 
-# Load sample AI-generated report text
-# This text should be checked for quality and accuracy
-sample_text = read_file("09_text_analysis/data/sample_reports.txt")
+# We want this script to run no matter what your current working directory is.
+# So we try to locate the project root (folder containing `.git`) and build paths from there.
+find_project_root = function(start_dir = getwd()) {
+  current = normalizePath(start_dir, winslash = "/", mustWork = FALSE)
+
+  for (i in 1:50) {
+    if (dir.exists(file.path(current, ".git"))) return(current)
+
+    parent = normalizePath(file.path(current, ".."), winslash = "/", mustWork = FALSE)
+    if (identical(parent, current)) break
+    current = parent
+  }
+
+  # Fall back to current working directory if we can't find `.git`.
+  normalizePath(start_dir, winslash = "/", mustWork = FALSE)
+}
+
+project_root = find_project_root()
+sample_reports_path = file.path(project_root, "09_text_analysis", "data", "sample_reports.txt")
+
+# Load sample AI-generated report text (or use a fallback if the file isn't there).
+sample_text = if (file.exists(sample_reports_path)) {
+  read_file(sample_reports_path)
+} else {
+  warning(paste0("Could not find `", sample_reports_path, "`. Using built-in sample text instead."))
+  paste(
+    "Example county emissions report (built-in sample):",
+    "",
+    "In 2022, the county recorded emissions data for multiple pollutants. The year-over-year trend suggests improvements for some pollutant categories.",
+    "Recommendations: the county should expand monitoring, validate the data pipeline, and prioritize high-impact sources.",
+    sep = "\n"
+  )
+}
 
 # Split text into individual reports (reports are separated by blank lines)
 # Remove empty strings and trim whitespace
-reports = strsplit(sample_text, "\n\n")[[1]]
+reports = str_split(sample_text, "\\r?\\n\\s*\\r?\\n")[[1]]
 reports = trimws(reports)
 reports = reports[reports != ""]  # Remove empty strings
 

@@ -10,12 +10,13 @@
 
 ## 0.1 Load Packages #################################
 
+import ast  # for parsing model stringified table args (single-quoted dicts)
 import requests  # for HTTP requests
 import json      # for working with JSON
 import pandas as pd  # for data manipulation
 
 # If you haven't already, install these packages...
-# pip install requests pandas
+# pip install requests pandas tabulate
 
 ## 0.2 Load Functions #################################
 
@@ -49,7 +50,21 @@ def get_table(df):
     str
         Markdown-formatted table string
     """
-    return df.to_markdown(index=False)
+    # Ollama may pass dict, JSON/str, or Python repr; normalize to DataFrame
+    if isinstance(df, pd.DataFrame):
+        out = df
+    elif isinstance(df, dict):
+        out = pd.DataFrame(df)
+    elif isinstance(df, str):
+        s = df.strip()
+        try:
+            parsed = json.loads(s)
+        except json.JSONDecodeError:
+            parsed = ast.literal_eval(s)
+        out = pd.DataFrame(parsed) if isinstance(parsed, dict) else pd.DataFrame(parsed)
+    else:
+        out = pd.DataFrame(df)
+    return out.to_markdown(index=False)
 
 # 2. DEFINE TOOL METADATA ###################################
 
@@ -104,7 +119,7 @@ messages = [
 ]
 
 resp = agent(messages=messages, model=MODEL, output="text")
-print("📝 Standard Chat Response:")
+print("Standard Chat Response:")
 print(resp)
 print()
 
@@ -116,7 +131,7 @@ messages = [
 ]
 
 resp = agent(messages=messages, model=MODEL, output="tools", tools=[tool_add_two_numbers])
-print("🔧 Tool Call #1 Result:")
+print("Tool Call #1 Result:")
 print(resp)
 print()
 
@@ -129,7 +144,13 @@ if isinstance(resp, list) and len(resp) > 0:
 
 # Try calling tool #2 (get_table)
 # First, create a simple DataFrame with the result from tool #1
-result_value = resp[0].get("output", 0) if isinstance(resp, list) else 0
+if isinstance(resp, list) and len(resp) > 0:
+    result_value = resp[0].get("output", 0)
+elif isinstance(resp, (int, float)):
+    # Some models answer in plain text instead of tool_calls; reuse that number
+    result_value = resp
+else:
+    result_value = 0
 df = pd.DataFrame({"x": [result_value]})
 
 messages = [
@@ -137,12 +158,12 @@ messages = [
 ]
 
 resp2 = agent(messages=messages, model=MODEL, output="tools", tools=[tool_get_table])
-print("🔧 Tool Call #2 Result:")
+print("Tool Call #2 Result:")
 print(resp2)
 print()
 
 # Compare against manual approach
-print("📊 Manual Table Creation:")
+print("Manual Table Creation:")
 manual_table = df.to_markdown(index=False)
 print(manual_table)
 print()

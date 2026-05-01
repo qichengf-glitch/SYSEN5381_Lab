@@ -1,4 +1,7 @@
 {
-  "python.defaultInterpreterPath": "${workspaceFolder}/envs/python/bin/python",
-  "python.terminal.activateEnvironment": false
+  "python.defaultInterpreterPath": "${workspaceFolder}/dsai/.venv/bin/python",
+  "python.terminal.activateEnvironment": false,
+
+  "r.rpath.mac": "/usr/local/bin/R",
+  "r.rterm.mac": "/usr/local/bin/R"
 }

@@ -28,7 +28,7 @@ from functions import agent_run
 MODEL = "smollm2:135m"  # use this small model (no function calling, < 200 MB)
 PORT = 11434  # use this default port
 OLLAMA_HOST = f"http://localhost:{PORT}"  # use this default host
-DB_PATH = "06_rag/data/papers.db"  # path to the SQLite database
+DB_PATH = "07_rag/data/papers.db"  # path to the SQLite database
 
 # 1. DATABASE CONNECTION ###################################
 

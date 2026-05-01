@@ -27,7 +27,7 @@ from functions import agent_run
 MODEL = "smollm2:135m"  # use this small model (no function calling, < 200 MB)
 PORT = 11434  # use this default port
 OLLAMA_HOST = f"http://localhost:{PORT}"  # use this default host
-DOCUMENT = "06_rag/data/pokemon.csv"  # path to the document to search
+DOCUMENT = "07_rag/data/pokemon.csv"  # path to the document to search
 
 # 1. SEARCH FUNCTION ###################################
 

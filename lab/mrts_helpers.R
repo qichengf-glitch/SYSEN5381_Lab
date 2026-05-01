@@ -14,14 +14,25 @@ MRTS_ENDPOINTS = c(
   "https://api.census.gov/data/timeseries/eits/mrts"
 )
 
+# Labels = display text; values = Census MRTS `category_code` (NAICS / aggregates).
+# Expanded beyond the two headline aggregates (44X72, 44X45) so users can pick
+# detailed retail subsectors; matching uses prefix/wildcard rules in industry_code_match().
 MRTS_INDUSTRIES = c(
   "Retail & Food Services (44X72)" = "44X72",
-  "Retail Trade (44X45)" = "44X45",
-  "Food Services & Drinking Places (722)" = "722",
+  "Retail Trade excl. Motor Vehicle & Gas (44X45)" = "44X45",
   "Motor Vehicle & Parts Dealers (441)" = "441",
-  "Nonstore Retailers (454)" = "454",
+  "Furniture & Home Furnishings Stores (442)" = "442",
+  "Electronics & Appliance Stores (443)" = "443",
+  "Building Materials & Garden Equipment (444)" = "444",
+  "Food & Beverage Stores (445)" = "445",
+  "Health & Personal Care Stores (446)" = "446",
+  "Gasoline Stations (447)" = "447",
+  "Clothing & Clothing Accessories Stores (448)" = "448",
+  "Sporting Goods, Hobby, Musical Instrument, Book (451)" = "451",
   "General Merchandise Stores (452)" = "452",
-  "Food & Beverage Stores (445)" = "445"
+  "Miscellaneous Store Retailers (453)" = "453",
+  "Nonstore Retailers (454)" = "454",
+  "Food Services & Drinking Places (722)" = "722"
 )
 
 MRTS_DATA_TYPES = c(
@@ -527,6 +538,283 @@ call_ollama_report = function(prompt_text) {
 
   txt = paste(as.character(unlist(txt)), collapse = "\n")
   structure(txt, model_used = model, backend = "Ollama")
+}
+
+call_openai_chat = function(system_prompt, user_prompt) {
+  api_key = Sys.getenv("OPENAI_API_KEY")
+  model = Sys.getenv("OPENAI_MODEL", "gpt-4o-mini")
+  url = "https://api.openai.com/v1/chat/completions"
+
+  if (!nzchar(api_key)) {
+    stop("OPENAI_API_KEY is not set.")
+  }
+
+  body = list(
+    model = model,
+    messages = list(
+      list(role = "system", content = system_prompt),
+      list(role = "user", content = user_prompt)
+    ),
+    temperature = 0.2
+  )
+
+  resp = httr::POST(
+    url,
+    httr::add_headers(
+      Authorization = paste("Bearer", api_key),
+      `Content-Type` = "application/json"
+    ),
+    body = jsonlite::toJSON(body, auto_unbox = TRUE),
+    encode = "raw",
+    timeout(60)
+  )
+
+  if (httr::status_code(resp) != 200) {
+    stop(glue("OpenAI request failed (HTTP {httr::status_code(resp)}): {httr::content(resp, 'text', encoding = 'UTF-8')}"))
+  }
+
+  out = jsonlite::fromJSON(httr::content(resp, "text", encoding = "UTF-8"), simplifyVector = FALSE)
+  if (!is.null(out$error)) {
+    err_msg = if (!is.null(out$error$message)) out$error$message else "Unknown error"
+    stop(glue("OpenAI API error: {err_msg}"))
+  }
+
+  txt = NULL
+  if (!is.null(out$choices) && length(out$choices) >= 1 && !is.null(out$choices[[1]]$message$content)) {
+    txt = out$choices[[1]]$message$content
+  } else if (!is.null(out$output_text)) {
+    txt = out$output_text
+  }
+
+  if (is.null(txt)) {
+    stop("OpenAI response missing text content.")
+  }
+
+  txt = paste(as.character(unlist(txt)), collapse = "\n")
+  structure(txt, model_used = model, backend = "OpenAI")
+}
+
+call_ollama_chat = function(system_prompt, user_prompt) {
+  model = Sys.getenv("OLLAMA_MODEL")
+  host = Sys.getenv("OLLAMA_HOST", "http://localhost:11434")
+
+  if (!nzchar(model)) {
+    stop("OLLAMA_MODEL is not set.")
+  }
+
+  ping = try(httr::GET(paste0(host, "/api/tags"), timeout(5)), silent = TRUE)
+  if (inherits(ping, "try-error") || httr::status_code(ping) >= 400) {
+    stop("Could not reach local Ollama endpoint. Set OLLAMA_HOST correctly and ensure `ollama serve` is running.")
+  }
+
+  body = list(
+    model = model,
+    messages = list(
+      list(role = "system", content = system_prompt),
+      list(role = "user", content = user_prompt)
+    ),
+    stream = FALSE
+  )
+
+  resp = httr::POST(
+    paste0(host, "/api/chat"),
+    httr::add_headers(`Content-Type` = "application/json"),
+    body = jsonlite::toJSON(body, auto_unbox = TRUE),
+    encode = "raw",
+    timeout(90)
+  )
+
+  if (httr::status_code(resp) != 200) {
+    stop(glue("Ollama request failed (HTTP {httr::status_code(resp)}): {httr::content(resp, 'text', encoding = 'UTF-8')}"))
+  }
+
+  out = jsonlite::fromJSON(httr::content(resp, "text", encoding = "UTF-8"), simplifyVector = FALSE)
+  if (!is.null(out$error)) {
+    stop(glue("Ollama API error: {out$error}"))
+  }
+
+  txt = NULL
+  if (!is.null(out$message$content)) {
+    txt = out$message$content
+  } else if (!is.null(out$response)) {
+    txt = out$response
+  }
+  if (is.null(txt)) {
+    stop("Ollama response missing text content.")
+  }
+
+  txt = paste(as.character(unlist(txt)), collapse = "\n")
+  structure(txt, model_used = model, backend = "Ollama")
+}
+
+run_llm_agent = function(system_prompt, user_prompt) {
+  combined_prompt = paste(
+    "System Instructions:",
+    system_prompt,
+    "",
+    "User Input:",
+    user_prompt,
+    sep = "\n"
+  )
+
+  if (nzchar(Sys.getenv("OPENAI_API_KEY"))) {
+    return(call_openai_report(combined_prompt))
+  }
+
+  if (nzchar(Sys.getenv("OLLAMA_MODEL"))) {
+    return(call_ollama_report(combined_prompt))
+  }
+
+  stop("AI is not configured. Set OPENAI_API_KEY, or set OLLAMA_MODEL and run a reachable Ollama server.")
+}
+
+multi_agent_prompts = function() {
+  list(
+    agent1 = paste(
+      "You are Agent 1, a Data Analyst for retail trend reporting.",
+      "Analyze the retail sales data provided by the user and produce a structured analysis summary.",
+      "You are the only agent allowed to access raw data.",
+      "",
+      "Return exactly this structure:",
+      "Trend Summary",
+      "- Overall direction",
+      "- Fastest growing industry",
+      "- Largest decline",
+      "- Most stable industry",
+      "- Most volatile industry",
+      "",
+      "Key Evidence Table",
+      "| Industry | Observation | Evidence |",
+      "",
+      "Analyst Notes",
+      "- bullet points",
+      "",
+      "Constraints:",
+      "- No business narrative",
+      "- Only analytical observations",
+      "- Structured output"
+    ),
+    agent2 = paste(
+      "You are Agent 2, a Business Report Writer.",
+      "Convert the user's structured analysis into a professional business report.",
+      "The user is only providing Agent 1 output.",
+      "You must use only the information in that analysis.",
+      "",
+      "Return exactly this structure:",
+      "Executive Overview",
+      "",
+      "Key Insights",
+      "- bullet points",
+      "",
+      "Business Interpretation",
+      "",
+      "Constraints:",
+      "- Use only Agent 1 information",
+      "- No additional facts",
+      "- Clear professional language"
+    ),
+    agent3 = paste(
+      "You are Agent 3, a Formatting and QA Agent.",
+      "Polish the report for readability and structure.",
+      "The user is only providing Agent 2 output.",
+      "Do not change facts and do not add new information.",
+      "",
+      "Return exactly this structure:",
+      "# Final Retail Trend Report",
+      "",
+      "Executive Overview",
+      "",
+      "Key Insights",
+      "",
+      "Business Interpretation",
+      "",
+      "Final Takeaway",
+      "",
+      "Constraints:",
+      "- Do not change facts",
+      "- Only improve clarity and formatting",
+      "- Keep concise"
+    )
+  )
+}
+
+format_retail_data_for_agent = function(df, stats, params) {
+  safe_df = df %>%
+    mutate(
+      month = format(as.Date(month), "%Y-%m"),
+      value = round(as.numeric(value), 2)
+    ) %>%
+    select(month, industry, data_type, seasonally_adj, value)
+
+  preview_rows = min(24, nrow(safe_df))
+  preview_tbl = knitr::kable(head(safe_df, preview_rows), format = "markdown")
+  preview_tbl = paste(as.character(preview_tbl), collapse = "\n")
+
+  stats_block = format_stats_for_prompt(stats)
+  primary_dtype = if (!is.null(params$primary_data_type)) params$primary_data_type else if (params$data_type == "default") "SM" else params$data_type
+
+  paste(
+    "Simulated/queried MRTS-style retail sales data for agent analysis.",
+    glue("Selected industries: {paste(params$industry_labels, collapse = ', ')}"),
+    glue("Date range: {params$start_month} to {params$end_month}"),
+    glue("Primary data type: {primary_dtype}"),
+    "",
+    "Summary statistics:",
+    stats_block,
+    "",
+    glue("Raw data preview (first {preview_rows} rows):"),
+    preview_tbl,
+    sep = "\n"
+  )
+}
+
+generate_multi_agent_report = function(df, stats, params) {
+  prompts = multi_agent_prompts()
+
+  agent1_input = paste(
+    "Analyze the retail dataset below and follow the required output structure exactly.",
+    "",
+    format_retail_data_for_agent(df, stats, params),
+    sep = "\n"
+  )
+
+  agent1_output = run_llm_agent(prompts$agent1, agent1_input)
+
+  agent2_input = paste(
+    "Use only the Agent 1 analysis below. Do not add facts or assumptions.",
+    "",
+    as.character(agent1_output),
+    sep = "\n"
+  )
+
+  agent2_output = run_llm_agent(prompts$agent2, agent2_input)
+
+  agent3_input = paste(
+    "Format and polish the Agent 2 report below without changing facts.",
+    "",
+    as.character(agent2_output),
+    sep = "\n"
+  )
+
+  agent3_output = run_llm_agent(prompts$agent3, agent3_input)
+
+  backend = attr(agent1_output, "backend")
+  model = attr(agent1_output, "model_used")
+  if (is.null(backend)) backend = attr(agent2_output, "backend")
+  if (is.null(model)) model = attr(agent2_output, "model_used")
+  if (is.null(backend)) backend = attr(agent3_output, "backend")
+  if (is.null(model)) model = attr(agent3_output, "model_used")
+
+  structure(
+    list(
+      agent1 = as.character(agent1_output),
+      agent2 = as.character(agent2_output),
+      agent3 = as.character(agent3_output),
+      final = as.character(agent3_output)
+    ),
+    backend = if (is.null(backend)) "unknown" else as.character(backend),
+    model_used = if (is.null(model)) "unknown" else as.character(model)
+  )
 }
 
 generate_ai_report = function(stats, params) {

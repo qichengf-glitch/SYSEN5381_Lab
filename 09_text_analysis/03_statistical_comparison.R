@@ -19,9 +19,72 @@ library(readr)  # for reading CSV files
 
 ## 0.2 Load Quality Control Scores ####################################
 
+# If not launched via Rscript, walk up from cwd until we find `.git` (repo root).
+find_project_root = function(start_dir = getwd()) {
+  current = normalizePath(start_dir, winslash = "/", mustWork = FALSE)
+
+  for (i in 1:50) {
+    if (dir.exists(file.path(current, ".git"))) return(current)
+
+    parent = normalizePath(file.path(current, ".."), winslash = "/", mustWork = FALSE)
+    if (identical(parent, current)) break
+    current = parent
+  }
+
+  normalizePath(start_dir, winslash = "/", mustWork = FALSE)
+}
+
+# Rscript passes `--file=/path/to/this_script.R`. Try that first, then repo-relative paths.
+# Multiple candidates cover: any cwd, spaces in folder names, and interactive `source()`.
+resolve_scores_csv_path = function() {
+  fname = "prompt_comparison_scores.csv"
+  candidates = character()
+
+  args = commandArgs(trailingOnly = FALSE)
+  file_arg = grep("^--file=", args, value = TRUE)
+  if (length(file_arg)) {
+    raw = sub("^--file=", "", file_arg)
+    if (nzchar(raw)) {
+      # Some environments mangle spaces in paths (e.g. `Folder~+~Name`); try a de-mangled form.
+      raw_alt = gsub("~\\+~", " ", raw, fixed = FALSE)
+      for (r in unique(c(raw, raw_alt))) {
+        if (!file.exists(r)) next
+        candidates = c(
+          candidates,
+          file.path(dirname(normalizePath(r, winslash = "/", mustWork = TRUE)), "data", fname)
+        )
+      }
+    }
+  }
+
+  candidates = c(
+    candidates,
+    file.path(find_project_root(), "09_text_analysis", "data", fname),
+    file.path(getwd(), "09_text_analysis", "data", fname),
+    file.path(getwd(), "data", fname)
+  )
+
+  for (p in candidates) {
+    if (!nzchar(p)) next
+    if (file.exists(p)) return(normalizePath(p, winslash = "/", mustWork = TRUE))
+    p2 = normalizePath(p, winslash = "/", mustWork = FALSE)
+    if (file.exists(p2)) return(normalizePath(p2, winslash = "/", mustWork = TRUE))
+  }
+
+  NULL
+}
+
+scores_path = resolve_scores_csv_path()
+
 # Load pre-computed quality control scores for reports from 3 different prompts
 # Each prompt generated 30 reports, and each report was evaluated on multiple criteria
-scores = read_csv("09_text_analysis/data/prompt_comparison_scores.csv")
+if (is.null(scores_path) || !file.exists(scores_path)) {
+  stop(
+    "Could not find `prompt_comparison_scores.csv`. Tried paths next to this script, ",
+    "`09_text_analysis/data/` under the repo root and cwd, and `data/` under cwd."
+  )
+}
+scores = read_csv(scores_path)
 
 # View the data structure
 cat("📊 Quality Control Scores Dataset:\n")

@@ -6,8 +6,10 @@ Depends: R (>= 4.0)
 Imports:
   shiny,
   bslib,
+  commonmark,
   DT,
   httr,
+  htmltools,
   jsonlite,
   dplyr,
   purrr,
