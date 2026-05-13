@@ -1,0 +1,146 @@
+prompt_id,run,data_specificity,trend_correctness,geographic_precision,factual_accuracy,formality_score,no_fabrication,rationale,report_snippet,overall_score
+A,1,83,80,100,1,90,1,"The report contains specific figures in most sentences, accurately describes the trend with a peak in 2022 and a decline in 2023, correctly identifies top states, and maintains a formal tone without fabrications.","The U.S. job-creation data from 2010 to 2023 demonstrates a fluctuating but generally upward trend, culminating in a peak in 2022 with over 21.6 million jobs created. After this peak, job creation sli",90.6
+A,2,83,80,100,1,90,1,"The report contains specific numeric figures in most sentences, accurately describes the job creation trend, correctly identifies leading states, and maintains a formal tone. All cited numbers are within 5% of the source data.","From 2010 to 2023, the U.S. experienced significant fluctuations in job creation, with a notable peak in 2022. In that year, the total number of jobs created soared to 21,651,280, marking the highest ",90.6
+A,3,100,100,100,1,100,1,"The report contains specific numeric figures in every sentence, accurately describes the job creation trend from 2010 to 2023, correctly identifies the top states, and all cited numbers are within 5% of the source data.","From 2010 to 2023, the U.S. experienced significant fluctuations in job creation, with a notable peak in 2022. The total number of jobs created surged to 21,651,280 that year, following a gradual incr",100.0
+A,4,83,80,100,0,90,0,"The report contains some inaccuracies in the job creation figures, particularly for the peak year and the total for 2022. It correctly identifies the trend and leading states, but some numbers deviate from the source data.","From 2010 to 2023, the U.S. job creation landscape has demonstrated significant fluctuations, marked by a notable peak in 2022. The total number of jobs created increased steadily from about 13.4 mill",65.6
+A,5,83,80,100,1,90,1,"The report contains specific figures in most sentences, accurately describes the trend with a peak in 2022 and a decline in 2023, correctly identifies top states, and maintains a formal tone without fabrications.","From 2010 to 2023, the U.S. job creation data shows a significant upward trend, particularly peaking in 2022 with over 21.6 million jobs created. The figures demonstrate a gradual increase in job crea",90.6
+A,6,83,80,100,0,90,0,"The report contains inaccuracies in job creation figures, particularly for 2022 and 2023. It correctly identifies the trend and leading states but misstates specific numbers, affecting factual accuracy and no fabrication scores.","Between 2010 and 2023, the U.S. experienced significant fluctuations in job creation, with a general upward trend culminating in a peak in 2022. The total number of jobs created rose from approximatel",65.6
+A,7,83,80,100,0,90,0,"The report contains some inaccuracies in numerical figures, such as the peak job creation number and the 2023 total. It correctly identifies the trend and leading states, but some figures deviate from the source data.","The U.S. job creation data from 2010 to 2023 shows a significant upward trend, particularly notable in the years following the COVID-19 pandemic. After peaking in 2022 with approximately 21.7 million ",65.6
+A,8,100,100,100,1,90,1,"The report accurately cites specific figures, correctly identifies the national trend, names all leading states, and maintains a formal tone. All numbers are within 5% of the source data, and no fabricated claims are present.","Between 2010 and 2023, the U.S. experienced notable fluctuations in job creation, culminating in a peak year in 2022, which saw a remarkable total of 21,651,280 jobs created. This figure represents a ",99.0
+A,9,83,80,100,0,85,0,"The report contains specific figures in most sentences, accurately describes the trend with a peak in 2022 and decline in 2023, and correctly identifies leading states. However, some numbers deviate from the source data, indicating factual inaccuracies and fabrication.","From 2010 to 2023, the United States experienced significant fluctuations in job creation, with a notable peak in 2022. The total number of jobs created reached its highest point that year, with over ",65.1
+A,10,83,80,100,0,80,0,"The report contains specific figures, but some numbers deviate from the source data (e.g., 21.6 million is not precise). It correctly identifies trends and leading states, but includes inaccuracies in job creation figures.","Between 2010 and 2023, the United States experienced significant fluctuations in job creation, with a notable peak in 2022, when over 21.6 million jobs were created. The annual totals show a general u",64.6
+A,11,83,90,100,1,100,1,"The report contains specific numeric figures in most sentences, accurately describes the job creation trend, correctly identifies leading states, and maintains a formal tone. All cited numbers are within 5% of the source data.","The U.S. job creation data from the Census Bureau's Business Dynamics Statistics reveals a notable upward trend in employment opportunities from 2010 to 2022, with a peak in 2022 when over 21.6 millio",94.1
+A,12,100,100,100,1,100,1,"The report accurately cites specific numbers, correctly identifies the national job creation trend, names all top states, and maintains formal language without any fabrication or inaccuracies.","The US job creation data from 2010 to 2023 shows a significant upward trend in employment opportunities, particularly highlighted by a notable peak in 2022. In 2022, the total number of jobs created r",100.0
+B,1,83,100,100,1,100,1,"The report contains specific numeric figures in most sentences, accurately describes the national trend, correctly identifies leading states, and maintains a formal tone without any fabrication or inaccuracies.","# Government Report on Job Creation Data (2010-2023)
+
+## Overview
+
+This report presents an analysis of job creation across the United States based on the Business Dynamics Statistics (BDS) provided by",96.6
+B,2,100,100,100,1,100,1,"The report contains specific numeric figures in every sentence, accurately describes the national job creation trend, correctly identifies leading states, maintains a formal tone, and all cited numbers are within 5% of the source data.","# Job Creation Report: 2010-2023
+
+**Prepared by**: [Author/Department Name]  
+**Date**: [Insert Date]  
+
+---
+
+## 1. Overview
+
+This report presents an analysis of job creation data in the United States",100.0
+B,3,83,100,100,1,100,1,"The report contains specific numeric figures in 10 out of 12 sentences, accurately describes the job creation trend, correctly identifies leading states, and maintains a formal tone. All cited numbers are within 5% of the source data.","# U.S. Job Creation Report: 2010-2023
+
+## 1. Overview
+
+The U.S. labor market has exhibited significant fluctuations in job creation from 2010 to 2023, reflecting the dynamic nature of the economy. Acc",96.6
+B,4,83,100,100,1,100,1,"The report contains specific numeric figures in most sentences, accurately describes the job creation trend, correctly identifies leading states, maintains a formal tone, and all cited numbers are accurate and traceable to the source data.","# Government Report on U.S. Job Creation Data (2010-2023)
+
+## 1. Overview
+The U.S. job creation landscape from 2010 to 2023 has displayed significant fluctuations, characterized by an overall upward t",96.6
+B,5,100,100,100,1,100,1,"The report accurately cites specific numeric figures, correctly describes the national job creation trend, names all leading states, and maintains a formal tone throughout. All cited numbers are within 5% of the source data, and no fabricated claims are present.","# Government Report on Job Creation in the United States (2010-2023)
+
+## 1. Overview
+
+The United States has experienced significant fluctuations in job creation over the past decade, as evidenced by d",100.0
+B,6,83,100,100,0,100,0,"The report contains a fabricated cumulative total of 225 million jobs created, which is not supported by the source data. However, it accurately describes trends and geographic details, with a high level of formality and specificity.","# U.S. Job Creation Report (2010-2023)
+
+## 1. Overview
+
+The job creation landscape in the United States from 2010 to 2023 reveals significant fluctuations and notable trends influenced by various econ",71.6
+B,7,100,100,100,1,100,1,"The report accurately cites specific job creation figures, correctly identifies the national trend with peak year and decline, names all top states, and maintains a formal tone without inaccuracies or fabrications.","# Government Report on Job Creation Data (2010-2023)
+
+## (1) Overview
+
+This report provides an analysis of job creation metrics across the United States from 2010 to 2023, as reported by the Census Bu",100.0
+B,8,100,100,100,1,100,1,"The report includes specific numeric figures in every sentence, accurately describes the job creation trend, correctly identifies leading states, maintains formal language, and all cited numbers are within 5% of the source data.","**Government Report on Job Creation in the United States (2010-2023)**
+
+**Prepared by: [Your Department Name]**  
+**Date: [Insert Date]**  
+
+---
+
+### 1. Overview
+
+This report provides an analysis of j",100.0
+B,9,100,100,100,1,100,1,"The report includes specific numeric figures in every sentence, accurately describes the job creation trend, correctly identifies the top states, maintains formal language, and all cited numbers are within 5% of the source data.","# Government Report on US Job Creation Data (2010-2023)
+
+## (1) Overview
+
+This report analyzes job creation trends across the United States from 2010 to 2023, utilizing data from the Census Bureau's B",100.0
+B,10,83,80,100,0,90,0,"The report contains some inaccuracies in the job creation figures, particularly for 2022 and 2023, which deviate by more than 5%. It correctly identifies trends and leading states, but the numerical specifics are flawed.","# U.S. Job-Creation Report: 2010-2023
+
+## 1. Overview
+
+This report provides an analysis of job creation trends across the United States from 2010 to 2023, utilizing data from the Census Bureau's Busin",65.6
+B,11,83,80,100,0,90,0,"The report contains inaccuracies in job creation figures, particularly for 2022 and 2021, which deviate by more than 5%. It correctly identifies trends and leading states, but the peak year figure is incorrect, affecting trend correctness.","# U.S. Job Creation Report (2010-2023)
+
+### 1. Overview
+
+The job creation landscape in the United States has undergone significant fluctuations from 2010 to 2023, as evidenced by data from the Census ",65.6
+B,12,83,100,100,1,100,1,"The report contains specific numeric figures in most sentences, accurately describes the job creation trend, correctly identifies leading states, maintains a formal tone, and all cited numbers are accurate and traceable to the source data.","# U.S. Job Creation Report (2010-2023)
+
+### (1) Overview
+
+The United States has experienced significant fluctuations in job creation from 2010 to 2023, as evidenced by data from the Census Bureau's Bu",96.6
+C,1,100,100,100,1,100,1,"The report accurately cites specific numeric figures throughout, correctly identifies the national trend including the peak year and decline, names all top states accurately, maintains a formal tone, and contains no fabricated claims.","**Analytical Brief: Job Creation in the United States (2010-2023)**
+
+**Introduction**
+This analytical brief presents an overview of job creation trends across the United States from 2010 to 2023, util",100.0
+C,2,100,100,60,1,100,1,"The report contains specific numeric figures in every sentence, accurately describes the national job creation trend, and correctly identifies California, Texas, and Florida as top states. It maintains a formal tone and all cited numbers are accurate.","**Analytical Brief: Job Creation Trends in the United States (2010-2023)**
+
+**Introduction**  
+This analytical brief examines job creation data from the U.S. Census Bureau's Business Dynamics Statisti",92.0
+C,3,100,80,100,1,100,1,"The report contains specific numeric figures in every sentence, accurately describes the trend with a peak in 2022 and a decline in 2023, correctly identifies top states, and maintains a formal tone without fabrications.","**Analytical Brief: Job Creation Trends in the United States (2010-2023)**
+
+**Prepared by:** U.S. Census Bureau  
+**Date:** [Insert Date]  
+**Subject:** Analysis of Job Creation Data from 2010 to 2023",95.0
+C,4,100,100,100,1,100,1,"The report contains specific numeric figures in every sentence, accurately describes the job creation trend, correctly identifies the top states, and maintains a formal tone. All cited numbers are within 5% of the source data.","**Analytical Brief: Job Creation Trends in the United States (2010-2023)**
+
+**Introduction**
+
+This analytical brief synthesizes data on job creation across the United States from 2010 to 2023, utilizi",100.0
+C,5,100,100,100,1,100,1,"The report contains specific numeric figures in every sentence, accurately describes the job creation trend, correctly identifies the top states, and maintains a formal tone without any fabrication or inaccuracies.","### Analytical Brief: Job Creation Trends in the United States (2010-2023)
+
+**To: Policy Makers**
+
+**From: U.S. Census Bureau**
+
+**Date: [Insert Today's Date]**
+
+**Subject: Analysis of Job Creation Da",100.0
+C,6,100,100,100,1,100,1,"The report contains specific numeric figures in every sentence, accurately describes the job creation trend, correctly identifies the top states, and maintains a formal tone without any fabrication or inaccuracies.","**Analytical Brief: Job Creation Trends from 2010 to 2023**
+
+**Prepared for Policy Consideration by the U.S. Census Bureau**
+
+**Introduction**
+
+This brief analyzes job creation data across the United ",100.0
+C,7,83,100,100,1,100,1,"The report contains specific numeric figures in most sentences, accurately describes the job creation trend, correctly identifies top states, and maintains a formal tone. All cited numbers are within 5% of the source data.","**Analytical Brief: Job Creation Trends in the United States (2010-2023)**
+
+**Introduction**
+This analytical brief presents an overview of job creation trends across the United States from 2010 to 202",96.6
+C,8,100,100,100,1,100,1,"The report includes specific numeric figures in every sentence, accurately describes the job creation trend with the peak year and post-2022 decline, correctly identifies the top states, and maintains a formal tone without any fabrication.","**Analytical Brief on Job Creation Data (2010-2023)**
+
+**Prepared by the U.S. Census Bureau**
+
+**Introduction**
+
+This analytical brief provides a comprehensive overview of job creation trends across t",100.0
+C,9,100,100,100,1,100,1,"The report includes specific numeric figures in every sentence, accurately describes the job creation trend with correct peak year and decline, names all leading states correctly, maintains a formal tone, and contains no fabricated claims.","**U.S. Census Bureau Analytical Brief: Job Creation Trends (2010-2023)**
+
+**Introduction**  
+This analytical brief presents an overview of job creation trends in the United States between the years 20",100.0
+C,10,100,100,100,1,100,1,"The report contains specific numeric figures in every sentence, accurately describes the job creation trend, correctly identifies leading states, maintains a formal tone, and all cited numbers are within 5% of the source data.","**Analytical Brief: Job Creation Trends (2010-2023)**
+
+**Introduction**
+
+This analytical brief presents a summary of job creation trends in the United States from 2010 to 2023, utilizing data from the",100.0
+C,11,100,100,80,1,100,1,"The report contains specific numeric figures in every sentence, accurately describes the job creation trend, correctly identifies three top states, maintains formal language, and all cited numbers are within 5% of the source data.","**U.S. Census Bureau Analytical Brief: Job Creation Trends (2010-2023)**
+
+**Executive Summary:**
+This analytical brief provides an overview of job creation data in the United States from 2010 to 2023,",96.0
+C,12,100,100,100,1,100,1,"The report includes specific numeric figures in every sentence, accurately describes the job creation trend with the peak year and decline, correctly identifies the top states, and maintains a formal tone without any inaccuracies or fabrications.","**Analytical Brief: Job Creation Trends in the United States (2010-2023)**
+
+**To:** Policy Audience  
+**From:** Senior Economist, U.S. Census Bureau  
+**Date:** October 23, 2023  
+**Subject:** Analysi",100.0
